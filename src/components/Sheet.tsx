@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 /** iOS-achtige bottom sheet: veert open, en je kunt hem naar beneden vegen om te sluiten. */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
@@ -49,7 +50,8 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
   }
 
   if (!shown) return null
-  return (
+  // Altijd los op de pagina (portal): animaties van het scherm mogen de sheet niet "vangen".
+  return createPortal(
     <div className={'sheet-wrap' + (visible ? ' open' : '')} onClick={onClose}>
       <div ref={sheet} className="sheet" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="sheet-drag" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
@@ -61,6 +63,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
         </div>
         <div className="sheet-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

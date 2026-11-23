@@ -4,6 +4,7 @@ import { Avatar, DAYS } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { useApp, type Member } from '../lib/data'
 import { room } from '../lib/rooms'
+import { haptic, sound } from '../lib/feel'
 import { badges, dayState, feed, roomScores, scores, streak, weekStart, type Score } from '../lib/stats'
 
 export function Together({ onLog }: { onLog: () => void }) {
@@ -159,7 +160,7 @@ function Feed({ onLog }: { onLog: () => void }) {
                     </span>
                   </span>
                   {!mine ? (
-                    <button className={'kudos' + (i.kudos_at ? ' given' : '')} onClick={() => act.kudos(i, title)} disabled={!!i.kudos_at}
+                    <button className={'kudos' + (i.kudos_at ? ' given' : '')} onClick={() => { haptic([8, 40, 8]); sound('kudos'); act.kudos(i, title) }} disabled={!!i.kudos_at}
                       aria-label={i.kudos_at ? 'High five gegeven' : `Geef ${who?.name} een high five`}>
                       👏{i.kudos_at && <span className="kudos-burst" />}
                     </button>

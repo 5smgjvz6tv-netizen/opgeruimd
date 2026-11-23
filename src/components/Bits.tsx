@@ -8,7 +8,7 @@ export const Avatar = ({ m, size = 28 }: { m: Pick<Member, 'name' | 'color'>; si
   </span>
 )
 
-export function Check({ done, onClick, label }: { done: boolean; onClick: () => void; label: string }) {
+export function Check({ done, onClick, label }: { done: boolean; onClick: (e?: React.MouseEvent<HTMLButtonElement>) => void; label: string }) {
   return (
     <button className={'check' + (done ? ' on' : '')} onClick={onClick} role="checkbox" aria-checked={done} aria-label={label}>
       <Icon name="check" size={16} />

@@ -5,6 +5,7 @@ import { guess, room } from '../lib/rooms'
 import { Chips, Confetti } from './Bits'
 import { Icon } from './Icon'
 import { Sheet } from './Sheet'
+import { haptic, sound } from '../lib/feel'
 
 const dayName = (date: string) => new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'long' })
 export const niceDate = (date: string) => {
@@ -55,6 +56,7 @@ export function LogSheet({ open, onClose, preset }: { open: boolean; onClose: ()
     if (!task) { setBusy(false); return }
     await act.logDone(task, at, together, mins ?? task.minutes)
     const after = { ...task, last_done_at: at.toISOString(), archived: task.recurrence === 'once' }
+    sound('done'); haptic([10, 60, 20])
     setDone({ title: task.title, next: nextDue(after, addDays(today, 1)) })
     setBusy(false)
     setTimeout(onClose, 1900)

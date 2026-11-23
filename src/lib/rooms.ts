@@ -4,8 +4,15 @@ export const ROOMS = [
   { id: 'badkamer', label: 'Badkamer', icon: '🛁' },
   { id: 'slaapkamer', label: 'Slaapkamer', icon: '🛏️' },
   { id: 'was', label: 'Was', icon: '🧺' },
+  { id: 'toilet', label: 'Toilet', icon: '🚽' },
   { id: 'boven', label: 'Boven', icon: '⬆️' },
   { id: 'beneden', label: 'Beneden', icon: '⬇️' },
+  { id: 'hal', label: 'Hal & trap', icon: '🚪' },
+  { id: 'werkkamer', label: 'Werkkamer', icon: '💻' },
+  { id: 'kinderkamer', label: 'Kinderkamer', icon: '🧸' },
+  { id: 'huisdier', label: 'Huisdier', icon: '🐾' },
+  { id: 'buiten', label: 'Tuin & balkon', icon: '🌿' },
+  { id: 'auto', label: 'Auto & fiets', icon: '🚲' },
   { id: 'overig', label: 'Overig', icon: '✨' },
 ] as const
 

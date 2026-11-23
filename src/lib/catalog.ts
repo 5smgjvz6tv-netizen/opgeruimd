@@ -2,7 +2,7 @@
 // Vorm per taak: [id, titel, minuten, zwaarte (1 licht, 2 normaal, 3 zwaar), hoe vaak, zoekwoorden, populair?]
 // "Hoe vaak": een getal = elke N dagen; een tekst als 'ma,do' = vaste weekdagen.
 
-type Raw = [string, string, number, 1 | 2 | 3, number | string, string?, 1?]
+type Raw = [string, string, number, 1 | 2 | 3, number | string, string?, 1?, string?]
 export type CatalogTask = {
   id: string; title: string; room: string; minutes: number; effort: number; popular: boolean; keywords: string
   recurrence: 'weekly' | 'interval'; weekdays: number[]; interval_days: number | null
@@ -69,7 +69,7 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
     ['b-kastje', 'Badkamerkastje opruimen', 10, 1, 60, 'verzorging spullen over datum'],
     ['b-vloer', 'Badkamervloer dweilen', 10, 2, 7, 'vloer'],
   ] },
-  { id: 'toilet', label: 'Toilet', icon: '🚽', room: 'badkamer', tasks: [
+  { id: 'toilet', label: 'Toilet', icon: '🚽', room: 'toilet', tasks: [
     ['t-wc', 'Wc schoonmaken', 10, 3, 'wo', 'toilet pot bril', 1],
     ['t-wc-snel', 'Wc snel afnemen', 3, 2, 3, 'toilet bril'],
     ['t-fonteintje', 'Fonteintje en kraan afnemen', 3, 1, 7, 'wastafel toilet'],
@@ -86,37 +86,37 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
     ['l-droger', 'Pluizenfilter droger legen', 2, 1, 3, 'droger filter pluis'],
   ] },
   { id: 'vloeren', label: 'Vloeren', icon: '🧹', room: 'overig', tasks: [
-    ['v-zuig-beneden', 'Stofzuigen beneden', 15, 2, 'ma,do', 'stofzuiger vloer', 1],
-    ['v-zuig-boven', 'Stofzuigen boven', 15, 2, 'wo', 'stofzuiger vloer slaapkamer', 1],
-    ['v-dweil-beneden', 'Dweilen beneden', 15, 3, 'vr', 'dweil mop vloer'],
-    ['v-dweil-boven', 'Dweilen boven', 15, 3, 14, 'dweil mop'],
+    ['v-zuig-beneden', 'Stofzuigen beneden', 15, 2, 'ma,do', 'stofzuiger vloer', 1, 'beneden'],
+    ['v-zuig-boven', 'Stofzuigen boven', 15, 2, 'wo', 'stofzuiger vloer slaapkamer', 1, 'boven'],
+    ['v-dweil-beneden', 'Dweilen beneden', 15, 3, 'vr', 'dweil mop vloer', undefined, 'beneden'],
+    ['v-dweil-boven', 'Dweilen boven', 15, 3, 14, 'dweil mop', undefined, 'boven'],
     ['v-robot', 'Robotstofzuiger legen', 2, 1, 3, 'robot roomba bak'],
     ['v-kleed', 'Vloerkleed uitkloppen of zuigen', 10, 2, 14, 'kleed tapijt'],
   ] },
-  { id: 'hal', label: 'Hal & trap', icon: '🚪', room: 'beneden', tasks: [
+  { id: 'hal', label: 'Hal & trap', icon: '🚪', room: 'hal', tasks: [
     ['h-schoenen', 'Schoenen en jassen opruimen', 5, 1, 3, 'schoenen jassen kapstok', 1],
     ['h-trap', 'Trap stofzuigen', 10, 2, 7, 'traptreden'],
     ['h-voordeur', 'Voordeur en deurmat schoonmaken', 10, 1, 30, 'deurmat voordeur'],
     ['h-post', 'Post en papieren opruimen', 5, 1, 7, 'post brieven administratie'],
   ] },
-  { id: 'werkkamer', label: 'Werkkamer', icon: '💻', room: 'overig', tasks: [
+  { id: 'werkkamer', label: 'Werkkamer', icon: '💻', room: 'werkkamer', tasks: [
     ['o-bureau', 'Bureau opruimen', 5, 1, 7, 'bureau thuiswerken'],
     ['o-scherm', 'Scherm en toetsenbord schoonmaken', 5, 1, 30, 'toetsenbord monitor'],
     ['o-papieren', 'Papieren archiveren', 15, 1, 30, 'administratie ordner'],
   ] },
-  { id: 'kinderen', label: 'Kinderkamer', icon: '🧸', room: 'overig', tasks: [
+  { id: 'kinderen', label: 'Kinderkamer', icon: '🧸', room: 'kinderkamer', tasks: [
     ['c-speelgoed', 'Speelgoed opruimen', 10, 1, 1, 'speelgoed lego'],
     ['c-speelgoed-schoon', 'Speelgoed schoonmaken', 15, 1, 30, 'speelgoed desinfecteren'],
     ['c-kleding', 'Kinderkleding uitzoeken (te klein)', 20, 1, 90, 'kleding maat'],
   ] },
-  { id: 'huisdier', label: 'Huisdier', icon: '🐾', room: 'overig', tasks: [
+  { id: 'huisdier', label: 'Huisdier', icon: '🐾', room: 'huisdier', tasks: [
     ['p-bak', 'Kattenbak scheppen', 3, 2, 1, 'kat kattenbak', 1],
     ['p-bak-verschonen', 'Kattenbak helemaal verschonen', 10, 3, 14, 'kat korrels'],
     ['p-bakjes', 'Voer- en waterbakjes wassen', 3, 1, 3, 'hond kat bak'],
     ['p-haren', 'Haren van bank en kleden zuigen', 10, 2, 7, 'haren hond kat'],
     ['p-mand', 'Hondenmand of kattenkussen wassen', 10, 1, 30, 'mand kussen'],
   ] },
-  { id: 'buiten', label: 'Tuin & balkon', icon: '🌿', room: 'overig', tasks: [
+  { id: 'buiten', label: 'Tuin & balkon', icon: '🌿', room: 'buiten', tasks: [
     ['g-vegen', 'Balkon of terras vegen', 10, 2, 14, 'vegen bladeren'],
     ['g-planten', 'Tuinplanten water geven', 10, 1, 3, 'tuin water'],
     ['g-gras', 'Gras maaien', 30, 3, 14, 'grasmaaier gazon'],
@@ -135,7 +135,7 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
     ['a-boodschappen', 'Boodschappenlijst bijwerken', 5, 1, 7, 'boodschappen lijst'],
     ['a-opruimronde', 'Rondje door huis: alles op zijn plek', 10, 1, 1, 'opruimen rommel', 1],
   ] },
-  { id: 'auto', label: 'Auto & fiets', icon: '🚲', room: 'overig', tasks: [
+  { id: 'auto', label: 'Auto & fiets', icon: '🚲', room: 'auto', tasks: [
     ['m-auto-binnen', 'Auto van binnen opruimen', 15, 1, 30, 'auto rommel'],
     ['m-auto-zuig', 'Auto stofzuigen', 20, 2, 60, 'auto stofzuigen'],
     ['m-fiets', 'Fietsbanden oppompen', 5, 1, 30, 'fiets band'],
@@ -144,8 +144,8 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
 
 export const CATALOG: CatalogRoom[] = RAW.map((r) => ({
   id: r.id, label: r.label, icon: r.icon,
-  tasks: r.tasks.map(([id, title, minutes, effort, freq, keywords = '', popular]) => ({
-    id, title, room: r.room, minutes, effort, popular: !!popular, keywords: `${title} ${r.label} ${keywords}`.toLowerCase(),
+  tasks: r.tasks.map(([id, title, minutes, effort, freq, keywords = '', popular, roomId]) => ({
+    id, title, room: roomId ?? r.room, minutes, effort, popular: !!popular, keywords: `${title} ${r.label} ${keywords}`.toLowerCase(),
     recurrence: typeof freq === 'string' ? 'weekly' : 'interval',
     weekdays: typeof freq === 'string' ? freq.split(',').map((d) => DAY[d]) : [],
     interval_days: typeof freq === 'number' ? freq : null,

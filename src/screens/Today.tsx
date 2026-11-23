@@ -8,6 +8,8 @@ import { useApp, type Member, type PlanItem } from '../lib/data'
 import { isStandalone, pushState } from '../lib/push'
 import { room } from '../lib/rooms'
 import { streak } from '../lib/stats'
+import { floatText, haptic, sound } from '../lib/feel'
+import { points } from '../../supabase/functions/_shared/planner'
 
 const greet = () => { const h = new Date().getHours(); return h < 6 ? 'Goedenacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond' }
 const dateLabel = () => new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -31,7 +33,7 @@ function beep() {
   } catch { /* geen geluid mogelijk */ }
 }
 
-export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: () => void }) {
+export function Today({ goSettings, goTogether, onLog }: { goSettings: () => void; goTogether: () => void; onLog: () => void }) {
   const { d, act } = useApp()
   const { me, partner, household: hh } = d
   const today = localDate()
@@ -47,7 +49,7 @@ export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: ()
   const [party, setParty] = useState(0)
   const wasDone = useRef(allDone)
   useEffect(() => {
-    if (allDone && !wasDone.current) setParty(Date.now())
+    if (allDone && !wasDone.current) { setParty(Date.now()); sound('done'); haptic([10, 60, 10, 60, 20]) }
     wasDone.current = allDone
   }, [allDone])
   const rest = hh.rest_days.includes(weekday(today))
@@ -74,6 +76,15 @@ export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: ()
   const [push, setPush] = useState<string>('on')
   useEffect(() => { pushState().then(setPush) }, [])
   const s = streak(d)
+  const tagline = pickLine({ rest, allDone, running, snoozed, n: mine.filter((i) => i.status !== 'done').length, min: totalMin - doneMin, streak: s, partner: partner?.name })
+  // Afvinken: tik, plopje en zwevende punten.
+  const toggle = (i: PlanItem, el?: Element | null) => {
+    if (i.status !== 'done') {
+      haptic(); sound('pop')
+      floatText(el ?? null, `+${points(i.minutes, d.tasks.find((t) => t.id === i.task_id)?.effort)} pt`)
+    } else haptic(4)
+    act.toggle(i)
+  }
 
   return (
     <div className="screen">
@@ -81,6 +92,7 @@ export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: ()
         <div>
           <p className="eyebrow">{dateLabel()}</p>
           <h1>{greet()}, {me.name}</h1>
+          <p className="tagline" key={tagline}>{tagline}</p>
         </div>
         {s > 0 && <span className="pill flame" title="Dagen op rij">🔥 {s}</span>}
       </header>
@@ -143,7 +155,7 @@ export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: ()
 
             <ul className="tasks">
               {mine.map((i) => (
-                <TaskRow key={i.id} item={i} title={title(i.task_id)} onToggle={() => act.toggle(i)} onMore={() => setMenu(i)} />
+                <TaskRow key={i.id} item={i} title={title(i.task_id)} onToggle={(el) => toggle(i, el)} onMore={() => setMenu(i)} />
               ))}
             </ul>
 
@@ -188,6 +200,14 @@ export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: ()
         <Icon name="plus" size={20} />
       </button>
 
+      {!partner && (
+        <button className="invite-nudge" onClick={goTogether}>
+          <span className="nudge-av"><span>{me.name.slice(0, 1).toUpperCase()}</span><span className="plus">+</span></span>
+          <span className="grow"><b>Samen gaat het twee keer zo snel</b><br /><span className="muted small">Nodig je huisgenoot uit en verdeel de taken eerlijk</span></span>
+          <Icon name="chevron" size={18} />
+        </button>
+      )}
+
       {partner && (
         <section className="card partner">
           <div className="partner-head">
@@ -217,14 +237,14 @@ export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: ()
   )
 }
 
-function TaskRow({ item, title, onToggle, onMore }: { item: PlanItem; title: string; onToggle: () => void; onMore: () => void }) {
+function TaskRow({ item, title, onToggle, onMore }: { item: PlanItem; title: string; onToggle: (el?: Element | null) => void; onMore: () => void }) {
   const { d } = useApp()
   const t = d.tasks.find((x) => x.id === item.task_id)
   const done = item.status === 'done'
   return (
     <li className={'task' + (done ? ' done' : '')}>
-      <Check done={done} onClick={onToggle} label={title} />
-      <button className="task-main" onClick={onToggle}>
+      <Check done={done} onClick={(e) => onToggle(e?.currentTarget)} label={title} />
+      <button className="task-main" onClick={(e) => onToggle(e.currentTarget.parentElement?.querySelector(".check"))}>
         <span className="task-title"><span className="strike">{title}</span></span>
         <span className="muted small">{room(t?.room ?? null).icon} {room(t?.room ?? null).label} · {item.minutes} min{item.extra ? ' · extraatje' : ''}</span>
       </button>
@@ -244,6 +264,13 @@ function ItemMenu({ item, title, onClose }: { item: PlanItem | null; title: stri
   const nextSat = ((5 - weekday(localDate()) + 7) % 7) || 7
   return (
     <Sheet open={!!item} onClose={onClose} title={title}>
+      {live && live.status === 'done' && (
+        <div className="menu">
+          <button className="menu-item" onClick={run(() => act.toggle(live))}>
+            <span>↩️</span><span className="grow">Toch niet gedaan<br /><span className="muted small">Haalt het vinkje weg</span></span>
+          </button>
+        </div>
+      )}
       {live && (live.status === 'done' ? (
         p ? (
           <div className="menu">
@@ -252,7 +279,7 @@ function ItemMenu({ item, title, onClose }: { item: PlanItem | null; title: stri
                 <span className="muted small">Telt dan voor jullie allebei in het weekoverzicht</span></span>
             </button>
           </div>
-        ) : <p className="muted">Deze taak is al afgevinkt.</p>
+        ) : null
       ) : (
         <div className="menu">
           <p className="label">Verzetten naar</p>
@@ -283,3 +310,20 @@ function PartnerStatus({ m, items }: { m: Member; items: PlanItem[] }) {
 const Empty = ({ icon, title, text }: { icon: string; title: string; text: string }) => (
   <div className="empty"><span className="empty-icon">{icon}</span><h2>{title}</h2><p className="muted">{text}</p></div>
 )
+
+/** Speelse ondertitel die bij het moment past (wisselt per dag). */
+function pickLine(x: { rest: boolean; allDone: boolean; running: boolean; snoozed: boolean; n: number; min: number; streak: number; partner?: string }) {
+  const day = new Date().getDate()
+  const pick = (l: string[]) => l[day % l.length]
+  if (x.rest) return pick(['Rustdag. Voeten omhoog 🌿', 'Vandaag hoeft er niks. Geniet ervan ☕'])
+  if (x.running) return pick(['Go go go! Je kunt het 💨', 'Muziekje aan en gaan 🎶', 'Elke minuut telt ⏱️'])
+  if (x.allDone) return pick(['Je huis is je dankbaar 🏡', 'Klaar! De rest van de avond is van jou 🛋️', 'Opgeruimd staat netjes ✨'])
+  if (x.snoozed) return 'Even pauze, ik herinner je straks 😴'
+  if (!x.n) return pick(['Alles bij. Lekker bezig 🙌', 'Niks te doen. Wat een luxe ✨'])
+  if (x.streak >= 3) return `${x.streak} dagen op rij, hou vol! 🔥`
+  return pick([
+    `${x.n} ${x.n === 1 ? 'taakje' : 'taakjes'}, ±${x.min} min, en je huis glimt weer ✨`,
+    `Een kwartiertje en je bent klaar 💪`,
+    x.partner ? `Samen met ${x.partner} houd je het bij 👫` : 'Kleine stapjes, opgeruimd huis 🧹',
+  ])
+}

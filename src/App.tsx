@@ -62,7 +62,7 @@ function Home({ userId }: { userId: string }) {
   return (
     <Ctx.Provider value={value}>
       <main className="app">
-        {tab === 'today' && <Today goSettings={() => setTab('settings')} onLog={() => openLog()} />}
+        {tab === 'today' && <Today goSettings={() => setTab('settings')} goTogether={() => { setTab('together'); scrollTo({ top: 0 }) }} onLog={() => openLog()} />}
         {tab === 'tasks' && <Tasks onAdd={() => setSheet({ open: true, task: null })} onEdit={(task) => setSheet({ open: true, task })} />}
         {tab === 'together' && <Together onLog={() => openLog()} />}
         {tab === 'settings' && <Settings />}

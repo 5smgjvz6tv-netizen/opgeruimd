@@ -1,20 +1,24 @@
+import { useState } from 'react'
 import { daysBetween, dueSince, localDate, nextDue, weekday } from '../../supabase/functions/_shared/planner'
 import { niceDate } from '../components/LogSheet'
 import { Avatar, DAYS_LONG } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { useApp, type Task } from '../lib/data'
-import { room } from '../lib/rooms'
+import { room, ROOMS, scheduleLabel } from '../lib/rooms'
 import { overdue } from '../lib/stats'
 
 export function Tasks({ onEdit, onAdd }: { onEdit: (t: Task) => void; onAdd: () => void }) {
   const { d, act } = useApp()
   const late = overdue(d)
   const planned = new Set(d.items.filter((i) => i.date === localDate()).map((i) => i.task_id))
-  const active = d.tasks.filter((t) => !t.archived)
+  const [only, setOnly] = useState<string | null>(null)
+  const all = d.tasks.filter((t) => !t.archived)
+  const active = all.filter((t) => !only || (t.room ?? 'overig') === only)
+  const roomsUsed = ROOMS.filter((r) => all.some((t) => (t.room ?? 'overig') === r.id))
   const todayWd = weekday(localDate())
   const groups: { key: string; title: string; tasks: Task[]; today?: boolean }[] = [
     ...DAYS_LONG.map((name, i) => ({ key: 'd' + i, title: name, today: i === todayWd, tasks: active.filter((t) => t.recurrence === 'weekly' && t.weekdays.includes(i)) })),
-    { key: 'int', title: 'Om de paar dagen', tasks: active.filter((t) => t.recurrence === 'interval') },
+    { key: 'int', title: 'Terugkerend', tasks: active.filter((t) => t.recurrence === 'interval') },
     { key: 'once', title: 'Eenmalig', tasks: active.filter((t) => t.recurrence === 'once') },
   ]
   const rest = d.household.rest_days
@@ -46,9 +50,19 @@ export function Tasks({ onEdit, onAdd }: { onEdit: (t: Task) => void; onAdd: () 
           </ul>
         </section>
       )}
+      {roomsUsed.length > 1 && (
+        <div className="room-filter" role="tablist" aria-label="Filter op ruimte">
+          <button className={'rf' + (!only ? ' on' : '')} onClick={() => setOnly(null)} aria-pressed={!only}>Alles <small>{all.length}</small></button>
+          {roomsUsed.map((r) => (
+            <button key={r.id} className={'rf' + (only === r.id ? ' on' : '')} onClick={() => setOnly(only === r.id ? null : r.id)} aria-pressed={only === r.id}>
+              {r.icon} {r.label} <small>{all.filter((t) => (t.room ?? 'overig') === r.id).length}</small>
+            </button>
+          ))}
+        </div>
+      )}
       {!active.length && <p className="muted center">Nog geen taken. Tik op + om er een toe te voegen.</p>}
-      {groups.map((g) => (
-        <section key={g.key} className="group">
+      {groups.filter((g) => g.tasks.length || g.today).map((g) => (
+        <section key={g.key + (only ?? '')} className="group">
           <h3 className={'group-title' + (g.today ? ' today' : '')}>
             {g.title}{g.today && <span className="tag">vandaag</span>}
             {g.key.startsWith('d') && rest.includes(+g.key.slice(1)) && <span className="tag soft">rustdag</span>}
@@ -57,7 +71,7 @@ export function Tasks({ onEdit, onAdd }: { onEdit: (t: Task) => void; onAdd: () 
             <ul className="card list">
               {g.tasks.map((t) => <TaskLine key={t.id} t={t} onClick={() => onEdit(t)} />)}
             </ul>
-          ) : g.key.startsWith('d') ? <p className="muted small empty-day">Niks vast</p> : null}
+          ) : <p className="muted small empty-day">Vandaag niks vast 🎉</p>}
         </section>
       ))}
     </div>
@@ -74,7 +88,7 @@ function TaskLine({ t, onClick }: { t: Task; onClick: () => void }) {
   const nd = !moved && !due ? nextDue(t) : null
   const ago = t.last_done_at ? daysBetween(localDate(t.last_done_at), localDate()) : null
   const when = nd ? `volgende ${niceDate(nd)}` : null
-  const meta = moved ?? when ?? (t.recurrence === 'interval' ? `elke ${t.interval_days} dagen` : t.recurrence === 'once' && t.due_date ? `vanaf ${new Date(t.due_date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}` : null)
+  const meta = moved ?? when ?? (t.recurrence === 'interval' ? scheduleLabel(t) : t.recurrence === 'once' && t.due_date ? `vanaf ${new Date(t.due_date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}` : null)
   return (
     <li>
       <button className="line" onClick={onClick}>
