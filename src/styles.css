@@ -112,7 +112,7 @@ button.row:active { background: var(--fill); }
 .lv-badge { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--gold-soft); color: var(--gold); font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .streak { display: inline-flex; align-items: center; gap: 3px; color: var(--accent); font-weight: 700; font-size: 13px; }
 .ring { position: relative; flex: none; }
-.ring svg { transform: rotate(-90deg); display: block; }
+.ring > svg { transform: rotate(-90deg); display: block; }
 .ring circle { fill: none; }
 .ring-bg { stroke: var(--brand-soft); }
 .ring-fg { stroke: var(--brand); stroke-linecap: round; }

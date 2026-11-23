@@ -12,6 +12,7 @@ import { levelOf, weeklyChallenge, xpOf } from '../lib/game'
 import { list, locale, plural, t } from '../lib/i18n'
 import { isStandalone, pushState } from '../lib/push'
 import { room } from '../lib/rooms'
+import { renderShareCard } from '../lib/shareCard'
 import { adaptiveRoundTip, streak, weekStart } from '../lib/stats'
 
 const greet = () => { const h = new Date().getHours(); return t(h < 6 ? 'today.night' : h < 12 ? 'today.morning' : h < 18 ? 'today.afternoon' : 'today.evening') }
@@ -307,17 +308,37 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
               <div className="btn-row" style={{ marginTop: 12 }}>
                 <button className="btn tinted grow" onClick={async () => {
                   haptic(4)
-                  const names = doneItems.map((i) => title(i.task_id)).join(', ')
                   const minSpent = timedMinutes > 0 ? timedMinutes : doneMin
+                  const blob = await renderShareCard({
+                    name: me.name,
+                    minutes: minSpent,
+                    xp: earnedXp,
+                    streak: s,
+                    tasks: doneItems.map((i) => ({ title: title(i.task_id), extra: i.extra })),
+                    extraCount: extraDone,
+                  })
+                  if (blob) {
+                    const file = new File([blob], 'opgeruimd-ronde.png', { type: 'image/png' })
+                    if (navigator.canShare?.({ files: [file] })) {
+                      try { await navigator.share({ files: [file], title: 'Opgeruimd' }); return } catch { return }
+                    }
+                    // Desktop / browser zonder file-share: download het kaartje direct
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'opgeruimd-ronde.png'
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    setSharedDone(true); setTimeout(() => setSharedDone(false), 2500)
+                    return
+                  }
+                  const names = doneItems.map((i) => title(i.task_id)).join(', ')
                   const text = extraDone > 0
                     ? t('today.shareTextExtra', { extra: extraDone, min: minSpent, xp: earnedXp, list: names })
                     : t('today.shareText', { n: doneItems.length, min: minSpent, xp: earnedXp, list: names })
-                  if (navigator.share) {
-                    try { await navigator.share({ title: 'Opgeruimd', text }); return } catch { /* user cancelled */ }
-                  }
                   try { await navigator.clipboard.writeText(text); setSharedDone(true); setTimeout(() => setSharedDone(false), 2500) } catch { /* */ }
                 }}>
-                  <Icon name="share" size={16} />{sharedDone ? t('common.copied') : t(d.solo ? 'today.shareDone' : 'today.shareMates')}
+                  <Icon name="share" size={16} />{sharedDone ? t('common.done') : t(d.solo ? 'today.shareDone' : 'today.shareMates')}
                 </button>
               </div>
             )}
