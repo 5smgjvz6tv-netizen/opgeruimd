@@ -57,8 +57,8 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
       <div className="ob-body" key={step} data-dir={dir}>
         {step === 'welcome' && (
           <>
-            <div className="ob-hero">
-              <img src={BASE + 'bas.svg'} alt="" className="app-icon" />
+            <div className="ob-hero welcome-poster">
+              <img src={BASE + 'bas-coach.webp'} alt="" className="app-icon" />
               <h1>Opgeruimd</h1>
               <p className="ob-sub" style={{ marginTop: 0 }}>{t('app.tagline')}</p>
             </div>
@@ -67,7 +67,7 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
               <div className="row"><Ic name="trophy" tone="gold" /><span className="row-main"><span className="row-title">{t('ob.w2')}</span><span className="row-sub">{t('ob.w2s')}</span></span></div>
               <div className="row"><Ic name="duo" tone="coral" /><span className="row-main"><span className="row-title">{t('ob.w3')}</span><span className="row-sub">{t('ob.w3s')}</span></span></div>
             </div>
-            <div className="ob-foot">
+            <div className="ob-foot welcome-actions">
               <button className="btn primary block" onClick={() => { set({ path: 'new' }); setDir(1); setStep('you') }}>{t('ob.start')}</button>
               <button className="btn soft block" onClick={() => { set({ path: 'join', size: 2 }); setDir(1); setStep('code') }}>{t('ob.haveCode')}</button>
               {!authed && <button className="btn ghost block" onClick={() => go('login')}>{t('ob.haveAccount')}</button>}
@@ -232,7 +232,7 @@ function Demo({ dr, onDone }: { dr: Draft; onDone: () => void }) {
   return (
     <>
       <div><h1 className="ob-title">{t('ob.demoTitle')}</h1><p className="ob-sub">{t('ob.demoSub')}</p></div>
-      <div className="coach" key={stage}><img className="ref-avatar" src={BASE + 'bas.svg'} alt="" /><span><strong>Bas</strong>{coach}</span></div>
+      <div className="coach" key={stage}><img className="ref-avatar" src={BASE + 'bas-coach.webp'} alt="" /><span><strong>Bas</strong>{coach}</span></div>
       <section className={'card round' + (all ? ' all-done' : '')}>
         {all && <Confetti />}
         <div className="round-head">
@@ -315,7 +315,7 @@ function Login() {
   }
   return (
     <form style={{ display: 'contents' }} onSubmit={submit}>
-      <div className="ob-hero"><img src={BASE + 'icon.svg'} alt="" className="app-icon" /><h1 className="ob-title">{t('ob.loginTitle')}</h1></div>
+      <div className="ob-hero"><img src={BASE + 'bas-coach.webp'} alt="" className="app-icon" /><h1 className="ob-title">{t('ob.loginTitle')}</h1></div>
       <div className="group">
         <input className="field" type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input className="field" type="password" autoComplete="current-password" placeholder={t('ob.password')} value={pw} onChange={(e) => setPw(e.target.value)} required />
