@@ -35,7 +35,11 @@ export function Bas({ cheer = false, className = '' }: { cheer?: boolean; classN
 
 const lowerFirst = (s: string) => (s.length > 1 && s[1] === s[1].toLowerCase() ? s[0].toLowerCase() + s.slice(1) : s)
 
-export function RoundCoach({ done, total, nextTask }: { done: number; total: number; nextTask?: string }) {
+const MID_KEYS = ['bas.mid1', 'bas.mid2', 'bas.mid3'] as const
+const BONUS_KEYS = ['bas.bonus1', 'bas.bonus2', 'bas.bonus3'] as const
+const FINISH_KEYS = ['bas.finish1', 'bas.finish2', 'bas.finish3'] as const
+
+export function RoundCoach({ done, total, nextTask, name = '', isBonus = false, xp = 0 }: { done: number; total: number; nextTask?: string; name?: string; isBonus?: boolean; xp?: number }) {
   const previous = useRef(done)
   const [cheering, setCheering] = useState(false)
   useEffect(() => {
@@ -49,8 +53,18 @@ export function RoundCoach({ done, total, nextTask }: { done: number; total: num
   }, [done])
   if (!total) return null
   const complete = done === total
-  return <div className="round-coach">
-    <Bas key={done} cheer={cheering || complete} />
-    <span aria-live="polite"><b>Bas</b>{complete ? t('bas.finish') : cheering ? t('bas.cheer') : t('bas.start', { task: lowerFirst(nextTask ?? '') })}</span>
+  const task = lowerFirst(nextTask ?? '')
+  const line = complete
+    ? (name ? t(FINISH_KEYS[(total + xp) % FINISH_KEYS.length], { name, xp }) : t('bas.finish'))
+    : cheering
+      ? t('bas.cheer')
+      : isBonus
+        ? t(BONUS_KEYS[(done + total) % BONUS_KEYS.length], { name, task })
+        : done > 0
+          ? t(MID_KEYS[done % MID_KEYS.length], { name, task })
+          : t('bas.start', { task })
+  return <div className={'round-coach' + (complete ? ' celebrating' : '')}>
+    <Bas key={done} cheer={cheering || complete || isBonus} />
+    <span aria-live="polite"><b>Bas</b>{line}</span>
   </div>
 }

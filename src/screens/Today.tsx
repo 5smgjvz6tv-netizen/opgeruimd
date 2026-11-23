@@ -123,10 +123,13 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, endsAt, act])
 
+  const remainingTodaySec = Math.max(0, hh.block_minutes * 60 - ts.elapsedSec)
   const startRoundTimer = () => {
-    const startSec = paused && ts.pausedLeftSec ? ts.pausedLeftSec : hh.block_minutes * 60
+    const startSec = paused && ts.pausedLeftSec
+      ? ts.pausedLeftSec
+      : remainingTodaySec >= 30 ? remainingTodaySec : hh.block_minutes * 60
     const nextTotal = paused ? totalSec : hh.block_minutes * 60
-    updateTs({ totalSec: nextTotal, pausedLeftSec: null, elapsedSec: ts.elapsedSec, startedAt: Date.now() })
+    updateTs({ totalSec: nextTotal, pausedLeftSec: null, elapsedSec: remainingTodaySec >= 30 || paused ? ts.elapsedSec : 0, startedAt: Date.now() })
     act.startTimer(startSec / 60)
     if (snoozed) act.unsnooze()
     setTimeUp(false); haptic()
@@ -207,7 +210,10 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
               </div>
             </div>
 
-            <RoundCoach done={doneItems.length} total={mine.length} nextTask={title(mine.find(i => i.status !== 'done')?.task_id ?? '')} />
+            {(() => {
+              const nextItem = mine.find(i => i.status !== 'done')
+              return <RoundCoach done={doneItems.length} total={mine.length} nextTask={title(nextItem?.task_id ?? '')} name={me.name} isBonus={!!nextItem?.extra} xp={earnedXp} />
+            })()}
 
             {(running || paused) && (
               <div className={'timer' + (paused ? ' paused' : left <= 10 ? ' ending' : '')} role="timer">
@@ -244,7 +250,9 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
                 ) : (
                   <>
                     <button className="btn primary grow" onClick={startRoundTimer}>
-                      <Icon name="play" size={16} />{t('today.start', { min: hh.block_minutes })}</button>
+                      <Icon name="play" size={16} />{ts.elapsedSec >= 30 && remainingTodaySec >= 30
+                        ? t('today.continue', { min: Math.ceil(remainingTodaySec / 60) })
+                        : t('today.start', { min: hh.block_minutes })}</button>
                     {!snoozed && <button className="btn soft" onClick={() => setSnoozeOpen(true)}><Icon name="moon" size={18} />{t('today.later')}</button>}
                   </>
                 )}
