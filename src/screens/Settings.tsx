@@ -109,13 +109,14 @@ export function Settings() {
           : push === 'off' && <button className="btn primary small" onClick={turnOn}>Zet aan</button>}
       </section>
       {err && <p className="error shake">{err}</p>}
-      <section className={'card' + (pushOn ? '' : ' dimmed')}>
+      <section className="card">
         <div className="tiles">
           {NOTIFY.map(([key, icon, label]) => (
             <Tile key={key} on={me.notify?.[key] !== false} icon={icon} label={label}
               onClick={() => { haptic(4); act.patchMe({ notify: { ...me.notify, [key]: me.notify?.[key] === false } }) }} />
           ))}
         </div>
+        {!pushOn && <p className="muted small push-later">Je keuzes worden bewaard en werken zodra meldingen aan staan 🔔</p>}
       </section>
 
       <Head icon="✨" title="Gevoel" sub="Kleine beloningen als je iets afvinkt" />
