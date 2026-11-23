@@ -109,4 +109,4 @@ function Home({ userId }: { userId: string }) {
   )
 }
 
-const Splash = () => <div className="splash"><img src={import.meta.env.BASE_URL + 'bas-mark.svg'} alt="" className="app-icon" /></div>
+const Splash = () => <div className="splash"><img src={import.meta.env.BASE_URL + 'mandmaatje.webp'} alt="" className="app-icon" /></div>

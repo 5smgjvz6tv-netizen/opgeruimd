@@ -10,7 +10,7 @@ export default defineConfig({
     apply: 'build',
     writeBundle(options, bundle) {
       const file = resolve(options.dir!, 'sw.js')
-      const shell = ['index.html', 'manifest.webmanifest', 'bas-mark.svg', 'helper-192.png',
+      const shell = ['index.html', 'manifest.webmanifest', 'mandmaatje.webp', 'mandmaatje-192.png',
         ...Object.keys(bundle).filter(path => /\.(js|css)$/.test(path))]
       writeFileSync(file, readFileSync(file, 'utf8').replace('/* SHELL_FILES */ []', JSON.stringify(shell)))
     },

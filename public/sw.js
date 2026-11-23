@@ -26,7 +26,7 @@ self.addEventListener('push', (e) => {
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
     tag: d.tag,
-    icon: 'helper-192.png',
+    icon: 'mandmaatje-192.png',
     badge: 'icon-192.png',
     data: { url: d.url || './' },
   }))
