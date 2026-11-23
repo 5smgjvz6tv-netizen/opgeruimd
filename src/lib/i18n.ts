@@ -293,7 +293,7 @@ const nl = {
   'push.timerT': 'Je tijd zit erop', 'push.timerB': 'Je ronde zit erop. Vink af wat gelukt is en ga lekker verder met je dag.', 'push.snoozeT': 'Tijd voor je opruimronde?',
   'push.swapT': '{name} vraagt of jij iets wilt overnemen', 'push.swapB': '{title} (±{min} min). Open de app om te antwoorden.',
   'push.yesT': '{name} neemt het over', 'push.yesB': '{title} staat nu bij {name}.', 'push.noT': '{name} kan het nu niet', 'push.noB': '{title} blijft bij jou.',
-  'push.testT': 'Meldingen werken', 'push.testB': 'Zo zien je herinneringen eruit.',
+  'push.testT': 'Bas · Let’s go!', 'push.testB': 'Meldingen werken. Zodra het tijd is geeft Bas je precies zo’n seintje.',
 }
 
 type Dict = Record<keyof typeof nl, string>
@@ -536,7 +536,7 @@ const en: Dict = {
   'push.timerT': 'Final whistle from Bas', 'push.timerB': 'That’s your round. Check off what you finished and enjoy the rest of your day.', 'push.snoozeT': 'Time for your tidy-up round?',
   'push.swapT': '{name} asks if you can take something over', 'push.swapB': '{title} (±{min} min). Open the app to answer.',
   'push.yesT': '{name} is taking it over', 'push.yesB': '{title} is now with {name}.', 'push.noT': '{name} can’t right now', 'push.noB': '{title} stays with you.',
-  'push.testT': 'Notifications work', 'push.testB': 'This is what your reminders look like.',
+  'push.testT': 'Bas · Let’s go!', 'push.testB': 'Notifications work. Bas will nudge you just like this when it’s time.',
 }
 
 const DICTS: Record<Lang, Dict> = { nl, en }

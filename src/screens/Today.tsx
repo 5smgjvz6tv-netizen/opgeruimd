@@ -147,7 +147,6 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [menu, setMenu] = useState<PlanItem | null>(null)
   const [learnTask, setLearnTask] = useState<Task | null>(null)
-  const askedThisSession = useRef(false)
   const [showExtras, setShowExtras] = useState(false)
   const snoozed = !!me.snooze_reason && (me.snooze_on_arrive || (!!me.snooze_until && Date.parse(me.snooze_until) > Date.now()))
   const minutesLeft = (running || paused) ? Math.floor(left / 60) : Math.max(0, hh.block_minutes - doneMin)
@@ -170,10 +169,9 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
     const completing = i.status !== 'done'
     if (completing) { haptic(); sound('pop'); floatText(el ?? null, `+${xpItem(i)} XP`) } else haptic(4)
     act.toggle(i)
-    if (completing && !askedThisSession.current) {
+    if (completing) {
       const task = taskOf(i.task_id)
       if (task && task.recurrence !== 'once' && !hasLearned(hh.id, task.id)) {
-        askedThisSession.current = true
         setTimeout(() => setLearnTask(task), 550)
       }
     }
