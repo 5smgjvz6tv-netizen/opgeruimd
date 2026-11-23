@@ -143,7 +143,15 @@ button.row:active { background: var(--fill); }
 .round-foot { display: flex; align-items: center; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .round-foot .glyph { width: 15px; height: 15px; }
 .round-foot button { color: var(--brand-ink); font-weight: 600; margin-left: auto; }
+.timer-wrap { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.timer-wrap .timer { margin-top: 0; }
 .timer { margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: var(--brand-soft); display: flex; align-items: center; gap: 14px; }
+.timer-ext { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.timer-ext-btn { padding: 6px 4px; border-radius: 10px; background: var(--fill); color: var(--brand-ink); font-size: 13px; font-weight: 650; text-align: center; font-variant-numeric: tabular-nums; }
+.timer-ext-btn:active { background: var(--brand-soft); }
+.notice-col { flex-direction: column; align-items: stretch; gap: 8px; }
+.notice-top { display: flex; align-items: center; gap: 8px; }
+.notice-col .timer-ext-btn { background: var(--card); }
 .timer.paused { background: var(--fill); }
 .timer.paused .timer-num { color: var(--muted); }
 .timer.paused .xpbar i { background: var(--muted); }

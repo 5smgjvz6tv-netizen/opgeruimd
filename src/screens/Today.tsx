@@ -233,20 +233,33 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
             })()}
 
             {(running || paused) && (
-              <div className={'timer' + (paused ? ' paused' : left <= 10 ? ' ending' : '')} role="timer">
-                <span className="timer-num">{mmss(left)}</span>
-                <div className="timer-meta">
-                  <XpBar frac={left / totalSec} />
-                  {timedMinutes > 0 && <span className="timer-sub">{t('today.elapsed', { min: timedMinutes })}</span>}
+              <div className={'timer-wrap' + (paused ? ' paused' : '')}>
+                <div className={'timer' + (paused ? ' paused' : left <= 10 ? ' ending' : '')} role="timer">
+                  <span className="timer-num">{mmss(left)}</span>
+                  <div className="timer-meta">
+                    <XpBar frac={left / totalSec} />
+                    {timedMinutes > 0 && <span className="timer-sub">{t('today.elapsed', { min: timedMinutes })}</span>}
+                  </div>
+                </div>
+                <div className="timer-ext">
+                  {[5, 10, 15, 30].map((m) => (
+                    <button key={m} type="button" className="timer-ext-btn" onClick={() => extendTimer(m)}>+{m} {t('common.min')}</button>
+                  ))}
                 </div>
               </div>
             )}
             {timeUp && !running && (
-              <div className="notice">
-                <Icon name="alarm" size={18} />
-                <span className="grow">{t('today.timeUp')}</span>
-                <button className="btn primary sm" onClick={() => extendTimer(5)}>{t('today.extendMore')}</button>
-                <button onClick={() => setTimeUp(false)} aria-label={t('common.close')}><Icon name="x" size={16} /></button>
+              <div className="notice notice-col">
+                <div className="notice-top">
+                  <Icon name="alarm" size={18} />
+                  <span className="grow">{t('today.timeUp')}</span>
+                  <button onClick={() => setTimeUp(false)} aria-label={t('common.close')}><Icon name="x" size={16} /></button>
+                </div>
+                <div className="timer-ext">
+                  {[5, 10, 15, 30].map((m) => (
+                    <button key={m} type="button" className="timer-ext-btn" onClick={() => extendTimer(m)}>+{m} {t('common.min')}</button>
+                  ))}
+                </div>
               </div>
             )}
             {snoozed && !running && (
@@ -263,7 +276,6 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
                 {running ? (
                   <>
                     <button className="btn primary grow" onClick={() => stopRoundTimer(true)}><Icon name="check" size={18} />{t('today.finish')}</button>
-                    <button className="btn tinted" onClick={() => extendTimer(5)}>{t('today.extendBtn')}</button>
                     <button className="btn soft" onClick={pauseRoundTimer}>{t('today.pause')}</button>
                   </>
                 ) : paused ? (
