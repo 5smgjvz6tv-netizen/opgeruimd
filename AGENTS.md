@@ -31,7 +31,7 @@ Opgeruimd is een tweetalige huishoudgame voor mensen die moeilijk tijd vrijmaken
 
 ## Stand van de overdracht
 
-De app draait op https://opgeruimd.vercel.app. Vercel is niet aan GitHub gekoppeld: push wijzigingen altijd naar `origin/main` én deploy direct met `npx vercel --prod --yes` zodat het meteen live staat om op iPhone te testen. De productversie op 23 november 2026 correspondeert met commit `e696184`. Latere wijzigingen staan in de Git-geschiedenis. De productiebuild gebruikt `npm run build` (TypeScript en Vite). Zie README.md voor lokaal draaien en backendinrichting.
+De app draait op https://opgeruimd.vercel.app. Vercel is niet aan GitHub gekoppeld: push wijzigingen altijd naar `origin/main` én deploy direct met `npx --yes vercel --prod --yes` zodat het meteen live staat om op iPhone te testen. Voer ook benodigde Supabase-migraties/SQL direct zelf uit (bijv. via het ingelogde Supabase-dashboard in de browser) en kom pas bij de eigenaar als er echt een blocker is. De productversie op 23 november 2026 correspondeert met commit `e696184`. Latere wijzigingen staan in de Git-geschiedenis. De productiebuild gebruikt `npm run build` (TypeScript en Vite). Zie README.md voor lokaal draaien en backendinrichting.
 
 Voor deze versie zijn de indeling voor één tot vier woonlagen en het behoud van handmatige keuzes gecontroleerd. De onboarding en taalwissel zijn in mobiele WebKit doorlopen. Offline heropenen, afvinken en synchroniseren zijn in Chromium gecontroleerd. Het nieuwe icoon is op klein formaat in grijstinten bekeken. Het uiterlijk in het Clear-thema van iOS 27 op een fysieke iPhone staat nog open.
 
