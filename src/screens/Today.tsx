@@ -67,7 +67,7 @@ function useNow(active: boolean) {
   return now
 }
 
-export function Today({ goSettings, goProgress, onLog }: { goSettings: () => void; goProgress: () => void; onLog: () => void }) {
+export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: () => void; goProgress: () => void; onLog: () => void; onAdd: () => void }) {
   const { d, act } = useApp()
   const { me, household: hh } = d
   const today = localDate()
@@ -189,6 +189,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
           <h1>{greet()}, {me.name}</h1>
           <p className="hdr-sub">{householdGreeting(d, allDone, rest, s)}</p>
         </div>
+        <button className="icon-btn filled" onClick={onAdd} aria-label={t('task.new')}><Icon name="plus" size={20} /></button>
       </header>
 
       <section className={'card round' + (allDone ? ' all-done' : '')}>

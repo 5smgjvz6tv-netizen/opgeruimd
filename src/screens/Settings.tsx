@@ -235,7 +235,7 @@ function Notifications() {
             : push === 'off' && (isStandalone || !isIOS) && <button className="btn primary sm" onClick={async () => { setErr(''); try { await enablePush(me.user_id); setPush('on') } catch (e) { setErr((e as Error).message) } }}>{t('set.notifTurnOn')}</button>}
         </div>
         {NOTIFY.filter(([, , , social]) => !social || !d.solo).map(([key, icon, label]) => (
-          <label key={key} className="row"><Ic name={icon} tone="gray" /><span className="row-main"><span className="row-title">{t(label)}</span></span>
+          <label key={key} className={'row' + (on ? '' : ' row-dim')}><Ic name={icon} tone="gray" /><span className="row-main"><span className="row-title">{t(label)}</span></span>
             <Switch on={me.notify?.[key] !== false} label={t(label)} onChange={(v) => { haptic(4); act.patchMe({ notify: { ...me.notify, [key]: v } }) }} /></label>
         ))}
       </div>

@@ -88,12 +88,11 @@ function Home({ userId }: { userId: string }) {
   return (
     <Ctx.Provider value={value}>
       <main className="app">
-        {tab === 'today' && <Today goSettings={() => go('settings')} goProgress={() => go('together')} onLog={() => openLog()} />}
+        {tab === 'today' && <Today goSettings={() => go('settings')} goProgress={() => go('together')} onLog={() => openLog()} onAdd={() => setSheet({ open: true, task: null })} />}
         {tab === 'tasks' && <Tasks onAdd={() => setSheet({ open: true, task: null })} onEdit={(task) => setSheet({ open: true, task })} />}
         {tab === 'together' && <Together />}
         {tab === 'settings' && <Settings />}
       </main>
-      {tab === 'today' && <button className="fab" onClick={() => setSheet({ open: true, task: null })} aria-label={t('task.new')}><Icon name="plus" size={24} /></button>}
       <nav className="tabbar">
         <span className="tab-ind" style={{ transform: `translateX(${TABS.findIndex((x) => x.id === tab) * 100}%)` }} />
         {TABS.map((x) => (
