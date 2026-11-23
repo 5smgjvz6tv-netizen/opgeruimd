@@ -114,26 +114,27 @@ export type RoundAdvice = {
 
 const MINUTE_STEPS = [5, 10, 15, 20, 30] as const
 
-/** Persoonlijk minuut-advies op basis van woonlagen, kamers, thuissituaties, huisgenoten en rustdagen. */
+/** Persoonlijk minuut-advies incl. het dagdeel van wekelijkse en maandelijkse klussen. */
 export function recommendRound(home: HomeLayout, size: number, restDays: number[]): RoundAdvice {
   const floors = Math.max(1, home.floors.length)
   const roomCount = home.floors.flat().length
   const hasPets = !!(home.cat || home.dog || home.pets)
-  let raw = 9 + (floors - 1) * 4.5 + Math.max(0, roomCount - 3) * 1.5
-  if (home.dishwasher) raw -= 2
-  if (home.cooksOften) raw += 3
-  if (home.cat) raw += 3
-  if (home.dog) raw += 4
-  else if (!home.cat && home.pets) raw += 3
-  if (home.youngKids) raw += 5
-  if (home.workFromHome) raw += 2
-  if (home.plants) raw += 1
-  if (home.garden) raw += 2
-  if (home.balcony) raw += 1
-  if (home.hasCleaner) raw *= 0.65
+  // Realistische dagbelasting voor het hele huis: dagelijkse basis + wekelijkse (badkamer, vloeren, was, bed) + maandelijkse klussen omgerekend per dag.
+  let raw = 17 + (floors - 1) * 7.5 + Math.max(0, roomCount - 4) * 2
+  if (home.dishwasher) raw -= 3
+  if (home.cooksOften) raw += 4
+  if (home.cat) raw += 4
+  if (home.dog) raw += 6
+  else if (!home.cat && home.pets) raw += 4
+  if (home.youngKids) raw += 7
+  if (home.workFromHome) raw += 3
+  if (home.plants) raw += 1.5
+  if (home.garden) raw += 3
+  if (home.balcony) raw += 1.5
+  if (home.hasCleaner) raw *= 0.6
 
   const activeDays = Math.max(1, 7 - restDays.length)
-  const houseMinutes = Math.max(5, Math.round((raw * 7) / activeDays / 5) * 5)
+  const houseMinutes = Math.max(10, Math.round((raw * 7) / activeDays / 5) * 5)
   const perPerson = (raw / Math.max(1, size)) * (7 / activeDays)
   const recommended = MINUTE_STEPS.reduce((best, m) => (Math.abs(m - perPerson) < Math.abs(best - perPerson) ? m : best), 15)
 

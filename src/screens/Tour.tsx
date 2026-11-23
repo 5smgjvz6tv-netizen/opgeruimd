@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { fillPlan, localDate, suggestExtras } from '../../supabase/functions/_shared/planner'
+import { SUPABASE_URL } from '../config'
 import { Ic } from '../components/Bits'
 import { Bas } from '../components/Bas'
 import { Icon } from '../components/Icon'
+import { Arrive } from './Settings'
 import { sb, useApp } from '../lib/data'
 import { xpOf } from '../lib/game'
 import { plural, t } from '../lib/i18n'
@@ -38,7 +40,7 @@ function Phone({ onNext }: { onNext: () => void }) {
             <span className="row-sub">{push === 'on' ? t('tour.pushDone') : push === 'denied' ? t('set.notifDenied') : !isStandalone && isIOS ? t('set.notifInstall') : t('tour.pushHow')}</span></span>
           {push === 'off' && (isStandalone || !isIOS) && <button className="btn primary sm" onClick={async () => { setErr(''); try { await enablePush(d.me.user_id); setPush('on') } catch (e) { setErr((e as Error).message) } }}>{t('set.notifTurnOn')}</button>}
         </div>
-        <div className="row"><Ic name="pin" tone="gray" /><span className="row-main"><span className="row-title">{t('tour.arrive')}</span><span className="row-sub">{t('tour.arriveHow')}</span></span></div>
+        <Arrive url={`${SUPABASE_URL}/functions/v1/arrive?t=${d.me.arrive_token}`} />
       </div>
       {err && <p className="error">{err}</p>}
       <div className="ob-foot"><button className="btn primary block" onClick={onNext}>{t('common.next')}</button></div>

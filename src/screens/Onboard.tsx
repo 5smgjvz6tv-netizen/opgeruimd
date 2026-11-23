@@ -71,7 +71,6 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
             <div className="welcome-intro">
               <Bas className="welcome-mark" />
               <h1>Opgeruimd</h1>
-              <p className="bas-intro">{t('ob.basIntro')}</p>
               <p className="ob-sub" style={{ marginTop: 0 }}>{t('app.tagline')}</p>
             </div>
             <div className="list welcome-features">
@@ -135,12 +134,12 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
             {dr.path === 'new' && (
               <>
                 <div className="advice-banner">
-                  <img className="ref-avatar" src={BASE + 'bas-rubber.webp'} alt="" />
+                  <Bas className="ref-avatar" />
                   <div>
                     <strong>{t(`ob.profile.${advice.profile}` as const)}</strong>
                     <p>{dr.size > 1
-                      ? t('ob.adviceTeam', { total: advice.houseMinutes, size: dr.size, min: advice.recommended, focus: t(`ob.focus.${advice.focus}` as const) })
-                      : t('ob.adviceSolo', { min: advice.recommended, profile: t(`ob.profile.${advice.profile}` as const).toLowerCase(), focus: t(`ob.focus.${advice.focus}` as const) })}
+                      ? t('ob.adviceTeam', { total: advice.houseMinutes, size: dr.size, min: advice.recommended })
+                      : t('ob.adviceSolo', { min: advice.recommended })}
                     </p>
                   </div>
                 </div>

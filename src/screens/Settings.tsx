@@ -245,7 +245,7 @@ function Notifications() {
   )
 }
 
-function Arrive({ url }: { url: string }) {
+export function Arrive({ url }: { url: string }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [manual, setManual] = useState(false)

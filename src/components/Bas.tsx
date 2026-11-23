@@ -1,13 +1,36 @@
 import { useEffect, useRef, useState } from 'react'
+import { haptic, sound } from '../lib/feel'
 import { t } from '../lib/i18n'
 
 const art = (pose: string) => import.meta.env.BASE_URL + 'bas-' + pose + '.webp'
 
 export function Bas({ cheer = false, className = '' }: { cheer?: boolean; className?: string }) {
-  return <span className={`bas-pose ${cheer ? 'cheering' : 'waving'} ${className}`} aria-hidden="true">
-    <img src={art(cheer ? 'cheer' : 'wave')} alt="" />
-    {!cheer && <img className="wave-in" src={art('wave-in')} alt="" />}
-  </span>
+  const [tapCount, setTapCount] = useState(0)
+  const [react, setReact] = useState<'cheer' | 'wave' | null>(null)
+  const timer = useRef<number | null>(null)
+
+  useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current) }, [])
+
+  const poke = () => {
+    haptic(6)
+    sound('pop')
+    const next = tapCount % 2 === 0 ? 'cheer' : 'wave'
+    setTapCount((n) => n + 1)
+    setReact(next)
+    if (timer.current) window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => setReact(null), 1500)
+  }
+
+  const isCheering = react ? react === 'cheer' : cheer
+  const stateClass = react === 'cheer' ? 'cheering tapped' : react === 'wave' ? 'waving tapped' : cheer ? 'cheering' : 'waving'
+
+  return (
+    <button type="button" onClick={poke} aria-label="Bas"
+      className={`bas-pose ${stateClass} ${className}`}>
+      <img key={`${isCheering}-${tapCount}`} src={art(isCheering ? 'cheer' : 'wave')} alt="" />
+      {!isCheering && <img className="wave-in" src={art('wave-in')} alt="" />}
+    </button>
+  )
 }
 
 const lowerFirst = (s: string) => (s.length > 1 && s[1] === s[1].toLowerCase() ? s[0].toLowerCase() + s.slice(1) : s)

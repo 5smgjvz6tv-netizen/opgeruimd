@@ -471,17 +471,25 @@ button.row:active { background: var(--fill); }
 .vague-chip { padding: 6px 10px; border-radius: 9px; background: var(--card); color: var(--text); font-size: 13px; font-weight: 550; text-align: left; border: 1px solid color-mix(in srgb, var(--brand) 24%, transparent); }
 .vague-chip:active { background: var(--fill); }
 
-.bas-pose { display: inline-grid; aspect-ratio: 1; flex: none; }
-.bas-pose > img { width: 100%; height: 100%; grid-area: 1/1; object-fit: contain; }
+.bas-pose { display: inline-grid; aspect-ratio: 1; flex: none; padding: 0; border-radius: 50%; transform-origin: 50% 88%; transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.bas-pose:active { transform: scale(0.92, 0.88); }
+.bas-pose > img { width: 100%; height: 100%; grid-area: 1/1; object-fit: contain; pointer-events: none; }
 .bas-pose .wave-in { visibility: hidden; }
 .round-coach { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 14px; line-height: 1.35; }
 .round-coach .bas-pose { width: 58px; }
 .round-coach b { display: block; }
 @media (prefers-reduced-motion: no-preference) {
-  .waving > img:first-child { animation: paw-out 430ms steps(1,end) 3; }
-  .waving .wave-in { animation: paw-in 430ms steps(1,end) 3; }
+  .bas-pose.waving { animation: bas-sway 3.2s ease-in-out infinite; }
+  .bas-pose.waving.tapped { animation: bas-wave-pop 900ms cubic-bezier(0.34, 1.4, 0.64, 1); }
+  .waving > img:first-child { animation: paw-out 380ms steps(1,end) 3; }
+  .waving .wave-in { animation: paw-in 380ms steps(1,end) 3; }
+  .waving.tapped > img:first-child { animation: paw-out 300ms steps(1,end) 4; }
+  .waving.tapped .wave-in { animation: paw-in 300ms steps(1,end) 4; }
   @keyframes paw-out { 50% { visibility: hidden; } }
   @keyframes paw-in { 50% { visibility: visible; } }
-  .cheering { animation: bas-hop 360ms ease-in-out 2; }
-  @keyframes bas-hop { 44% { transform: translateY(-5px) rotate(3deg); } }
+  @keyframes bas-sway { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-2.5px) rotate(-1.5deg); } }
+  @keyframes bas-wave-pop { 0% { transform: scale(1); } 25% { transform: scale(1.08, 0.94) rotate(-5deg); } 55% { transform: scale(0.97, 1.05) rotate(4deg); } 100% { transform: scale(1) rotate(0); } }
+  .cheering { animation: bas-hop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 2; }
+  .cheering.tapped { animation: bas-hop 460ms cubic-bezier(0.34, 1.56, 0.64, 1) 2; }
+  @keyframes bas-hop { 0%, 100% { transform: translateY(0) scale(1, 1) rotate(0deg); } 25% { transform: translateY(2px) scale(1.07, 0.93) rotate(-2deg); } 55% { transform: translateY(-9px) scale(0.95, 1.06) rotate(4deg); } }
 }
