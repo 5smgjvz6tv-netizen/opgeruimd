@@ -232,7 +232,7 @@ function Demo({ dr, onDone }: { dr: Draft; onDone: () => void }) {
   return (
     <>
       <div><h1 className="ob-title">{t('ob.demoTitle')}</h1><p className="ob-sub">{t('ob.demoSub')}</p></div>
-      <div className="coach" key={stage}><Ic name={all ? 'party' : 'hand-tap'} />{coach}</div>
+      <div className="coach" key={stage}><img className="ref-avatar" src={BASE + 'icon.svg'} alt="" /><span><strong>Bas</strong>{coach}</span></div>
       <section className={'card round' + (all ? ' all-done' : '')}>
         {all && <Confetti />}
         <div className="round-head">

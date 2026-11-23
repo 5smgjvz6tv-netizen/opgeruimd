@@ -1,12 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2BD3A0"/>
-      <stop offset="1" stop-color="#0A8F6E"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" fill="url(#g)"/>
-  <path d="M256 112 104 236v156a24 24 0 0 0 24 24h256a24 24 0 0 0 24-24V236Z" fill="#fff" opacity=".96"/>
-  <path d="m186 304 48 48 96-104" fill="none" stroke="#0FA37F" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M360 92l10 26 26 10-26 10-10 26-10-26-26-10 26-10Z" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>Bas, de wasbeer met zijn fluitje</title>
+  <rect width="128" height="128" fill="#096550"/>
+  <circle cx="64" cy="63" r="50" fill="#147761"/>
+  <!-- Referee jersey, cropped at the shoulders -->
+  <path d="M27 113q2-25 37-27 34 2 37 27-37 14-74 0Z" fill="#193c39"/>
+  <path d="m40 100 7-4-2 21-8-2zm17-8h8v27h-8zm20 2 8 3 5 19-9 2Z" fill="#e4ede0"/>
+  <!-- Ears and cheek tufts -->
+  <path d="M24 57q-7-21-3-34 15 1 29 17 15-7 29-1 13-14 26-16 5 16-2 37l9 11-7 1 4 8-10 1q-13 18-35 21-23-3-37-19l-10-2 5-7-8-2Z" fill="#afbcb1" stroke="#163e39" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M28 47q-4-10-3-17 9 2 16 12zm61-4q5-8 12-12 2 9-2 18Z" fill="#455953"/>
+  <path d="M25 63q16-16 35 1l4 4 6-6q18-14 33 2-7 22-31 17l-8-6-9 7q-18 3-30-19Z" fill="#273b3a"/>
+  <g fill="#faf3db"><ellipse cx="49" cy="68" rx="4" ry="5"/><ellipse cx="80" cy="67" rx="4" ry="5"/></g>
+  <g fill="#172d2c"><circle cx="50" cy="69" r="2.2"/><circle cx="79" cy="68" r="2.2"/></g>
+  <path d="M42 84q13-2 22-11 9 9 23 10-7 12-23 15-15-2-22-14Z" fill="#ece9d8"/>
+  <path d="M57 78q7-4 14 0-2 7-7 7-4 0-7-7Z" fill="#213533"/>
+  <path d="M64 84q-1 7 8 5" fill="none" stroke="#253c36" stroke-width="2" stroke-linecap="round"/>
+  <!-- Brass whistle held at the corner of the mouth -->
+  <path d="m70 87 16-3q9-6 13 2 4 9-5 12-7 2-10-5l-13-2Z" fill="#ffc758" stroke="#503e24" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="92" cy="90" r="2.7" fill="#a16d32"/>
+  <!-- Tilted green ball cap -->
+  <path d="M39 49q-2-18 13-25 21-10 35 12l-21 9Z" fill="#23a77f" stroke="#194f42" stroke-width="2.8"/>
+  <path d="M44 46q26-10 50-9 10 0 8 4-8 7-33 8l-27 4q-5-2 2-7Z" fill="#104b40"/>
+  <path d="M55 28q-7 6-8 15" fill="none" stroke="#80d7aa" stroke-width="2.4" stroke-linecap="round"/>
 </svg>

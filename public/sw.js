@@ -5,7 +5,8 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 self.addEventListener('push', (e) => {
   let d = {}
   try { d = e.data ? e.data.json() : {} } catch { d = { body: e.data?.text() } }
-  e.waitUntil(self.registration.showNotification(d.title || 'Opgeruimd', {
+  const title = d.tag === 'reminder' ? 'Bas · ' + (d.title || 'Opgeruimd') : d.title || 'Opgeruimd'
+  e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
     tag: d.tag,
     icon: 'icon-192.png',
