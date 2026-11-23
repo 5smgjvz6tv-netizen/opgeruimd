@@ -7,6 +7,7 @@ export const ROOMS = [
   { id: 'slaapkamer', label: 'Slaapkamer', icon: 'slaapkamer' },
   { id: 'was', label: 'Was', icon: 'was' },
   { id: 'toilet', label: 'Toilet', icon: 'toilet' },
+  { id: 'zolder', label: 'Zolder', icon: 'boven' },
   { id: 'boven', label: 'Boven', icon: 'boven' },
   { id: 'beneden', label: 'Beneden', icon: 'beneden' },
   { id: 'hal', label: 'Hal en trap', icon: 'hal' },

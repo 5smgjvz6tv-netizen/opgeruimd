@@ -3,6 +3,7 @@ import { Check, Confetti, Ic, Ring, Segmented, XpBar } from '../components/Bits'
 import { HomeLayoutPicker, HousePortrait } from '../components/HomeLayoutPicker'
 import { initialLayout, starterTasks, roomGroups } from '../lib/homeLayout'
 import { DayPicker, Dial, TimeSlider, Stepper } from '../components/Controls'
+import { Bas } from '../components/Bas'
 import { Icon } from '../components/Icon'
 import { CATALOG, DEFAULT_ROOMS, catTitle } from '../lib/catalog'
 import { sb } from '../lib/data'
@@ -61,7 +62,7 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
         {step === 'welcome' && (
           <>
             <div className="welcome-intro">
-              <img src={BASE + 'bas-rubber.webp'} alt="" className="welcome-mark" />
+              <Bas className="welcome-mark" />
               <h1>Opgeruimd</h1>
               <p className="ob-sub" style={{ marginTop: 0 }}>{t('app.tagline')}</p>
             </div>
@@ -197,7 +198,7 @@ function Demo({ dr, onDone }: { dr: Draft; onDone: () => void }) {
   return (
     <>
       <div><h1 className="ob-title">{t('ob.demoTitle')}</h1><p className="ob-sub">{t('ob.demoSub')}</p></div>
-      <div className="coach" key={stage}><img className="ref-avatar" src={BASE + 'bas-rubber.webp'} alt="" /><span><strong>Bas</strong>{coach}</span></div>
+      <div className="coach" key={stage}><Bas className="ref-avatar" cheer={all || stage === 1} /><span><strong>Bas</strong>{coach}</span></div>
       <section className={'card round' + (all ? ' all-done' : '')}>
         {all && <Confetti />}
         <div className="round-head">

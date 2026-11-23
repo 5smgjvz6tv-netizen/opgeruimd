@@ -2,18 +2,16 @@ import { useState } from 'react'
 import { Icon } from './Icon'
 import { Stepper } from './Controls'
 import { t } from '../lib/i18n'
-import { floorName, type HomeLayout } from '../lib/homeLayout'
+import { floorName, resizeLayout, toggleRoom, type HomeLayout } from '../lib/homeLayout'
 import { room } from '../lib/rooms'
 
-const choices = ['keuken','woonkamer','slaapkamer','badkamer','toilet','hal','werkkamer','kinderkamer','was']
+const choices = ['keuken','woonkamer','slaapkamer','badkamer','toilet','hal','werkkamer','kinderkamer','was','zolder']
 export function HomeLayoutPicker({ home, onChange }: { home: HomeLayout; onChange: (h: HomeLayout) => void }) {
   const [selected, select] = useState(0)
   const active = Math.min(selected, home.floors.length - 1)
   const changeCount = (count: number) => {
-    const floors = home.floors.slice(0, count).map(rooms => [...rooms])
-    while (floors.length < count) floors.push([])
-    for (const id of home.floors.slice(count).flat()) if (!floors.flat().includes(id)) floors[count - 1].push(id)
-    select(Math.min(count - 1, count > home.floors.length ? count - 1 : active)); onChange({ ...home, floors })
+    select(count > home.floors.length ? count - 1 : Math.min(active, count - 1))
+    onChange(resizeLayout(home, count))
   }
   const [landing, setLanding] = useState<number | null>(null)
   function option(label: string, icon: string, checked: boolean, toggle: () => void) {
@@ -36,9 +34,7 @@ export function HomeLayoutPicker({ home, onChange }: { home: HomeLayout; onChang
       </div>
     </div>
     <fieldset><legend>{t('layout.rooms', { floor: floorName(active) })}</legend><div className="room-options">
-      {choices.map(id => option(room(id).label, room(id).icon, home.floors[active].includes(id), () => onChange({
-        ...home, floors: home.floors.map((rooms, i) => i !== active ? rooms : rooms.includes(id) ? rooms.filter(r => r !== id) : [...rooms, id])
-      })))}
+      {choices.map(id => option(room(id).label, room(id).icon, home.floors[active].includes(id), () => onChange(toggleRoom(home, active, id))))}
     </div></fieldset>
     <fieldset><legend>{t('layout.extra')}</legend><div className="room-options">
       {(['dishwasher','garden','balcony'] as const).map(key => option(

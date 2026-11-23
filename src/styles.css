@@ -387,8 +387,6 @@ button.row:active { background: var(--fill); }
 .room-option i { margin-left: auto; flex: none; width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--muted); display: grid; place-items: center; }
 .room-option[aria-pressed=true] i { background: var(--text); color: var(--card); border-color: var(--text); }
 @media (prefers-reduced-motion: no-preference) {
-  .welcome-mark { animation: bas-hello 860ms ease-in-out 150ms both; }
-  @keyframes bas-hello { 30% { transform: rotate(-7deg) translateY(-3px); } 58% { transform: rotate(5deg); } 78% { transform: rotate(-2deg); } }
   .landing img { animation: floor-drop 440ms ease-out; }
   @keyframes floor-drop { 0% { opacity: 0; transform: translateY(-22px); } 65% { opacity: 1; transform: translateY(2px); } }
   .landing::after { content: ''; position: absolute; pointer-events: none; bottom: -2px; left: -5px; width: calc(var(--house-width) + 10px); height: 14px; background: radial-gradient(ellipse closest-side, #c7bba3 55%, transparent) left / 22px 10px no-repeat, radial-gradient(ellipse closest-side, #c7bba3 50%, transparent) right / 18px 12px no-repeat; opacity: 0; animation: floor-dust 420ms 200ms ease-out; }
@@ -407,3 +405,18 @@ button.row:active { background: var(--fill); }
 .round-options { padding: 14px; background: var(--card); border-radius: var(--r); }
 .round-options summary { cursor: pointer; font-weight: 600; }
 .round-options[open] .group { margin-top: 14px; }
+
+.bas-pose { display: inline-grid; aspect-ratio: 1; flex: none; }
+.bas-pose > img { width: 100%; height: 100%; grid-area: 1/1; object-fit: contain; }
+.bas-pose .wave-in { visibility: hidden; }
+.round-coach { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 14px; line-height: 1.35; }
+.round-coach .bas-pose { width: 58px; }
+.round-coach b { display: block; }
+@media (prefers-reduced-motion: no-preference) {
+  .waving > img:first-child { animation: paw-out 430ms steps(1,end) 3; }
+  .waving .wave-in { animation: paw-in 430ms steps(1,end) 3; }
+  @keyframes paw-out { 50% { visibility: hidden; } }
+  @keyframes paw-in { 50% { visibility: visible; } }
+  .cheering { animation: bas-hop 360ms ease-in-out 2; }
+  @keyframes bas-hop { 44% { transform: translateY(-5px) rotate(3deg); } }
+}

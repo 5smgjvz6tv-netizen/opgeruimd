@@ -9,8 +9,8 @@
   "theme_color": "#f4f4f6",
   "lang": "nl",
   "icons": [
-    { "src": "bas-rubber-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "bas-rubber-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "bas-rubber-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "bas-pine-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "bas-pine-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "bas-pine-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

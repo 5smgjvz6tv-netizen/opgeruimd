@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays, localDate, suggestExtras, weekday } from '../../supabase/functions/_shared/planner'
 import { Avatar, Check, Confetti, Ic, Ring, XpBar } from '../components/Bits'
+import { RoundCoach } from '../components/Bas'
 import { Icon } from '../components/Icon'
 import { Sheet } from '../components/Sheet'
 import { SnoozeSheet } from '../components/SnoozeSheet'
@@ -105,6 +106,8 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
                   : t('today.roundSub', { n: mine.length, tasks: plural(mine.length), min: totalMin, xp: totalXp })}</p>
               </div>
             </div>
+
+            <RoundCoach done={doneItems.length} total={mine.length} nextTask={title(mine.find(i => i.status !== 'done')?.task_id ?? '')} />
 
             {running && (
               <div className={'timer' + (left <= 10 ? ' ending' : '')} role="timer">
