@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CATALOG, DEFAULT_ROOMS, type CatalogTask } from '../lib/catalog'
+import { CATALOG, DEFAULT_ROOMS, catTitle, type CatalogTask } from '../lib/catalog'
 import { useApp, type Task, type TaskInput } from '../lib/data'
 import { xpOf } from '../lib/game'
 import { roomGroups } from '../lib/homeLayout'
@@ -7,7 +7,23 @@ import { list, plural, t } from '../lib/i18n'
 import { guess, room, ROOMS } from '../lib/rooms'
 import { Chips, Segmented } from './Bits'
 import { CatalogPicker } from './CatalogPicker'
+import { Icon } from './Icon'
 import { Sheet } from './Sheet'
+
+const VAGUE_NL = /^(?:(?:de|het|hele)\s+)?(woonkamer|keuken|badkamer|slaapkamer|wc|toilet|hal|gang|zolder|werkkamer|kinderkamer|tuin|balkon|washok|huis|kamer|alles)\s+(opruimen|schoonmaken|doen|poetsen|bijhouden)$|^(opruimen|schoonmaken|poetsen|huishouden)$/i
+const VAGUE_EN = /^(clean|tidy|tidy up|do|organize|organise)\s+(?:the\s+|whole\s+)?(living room|kitchen|bathroom|bedroom|toilet|hall|hallway|attic|office|study|kids'? room|garden|balcony|house|home|room|everything)$|^(clean|tidy|tidy up|chores|housework)$/i
+const ROOM_HINTS: [RegExp, string][] = [
+  [/woonkamer|living room/i, 'woonkamer'], [/keuken|kitchen/i, 'keuken'], [/badkamer|bathroom/i, 'badkamer'],
+  [/slaapkamer|bedroom/i, 'slaapkamer'], [/wc|toilet/i, 'toilet'], [/hal|gang|hall/i, 'hal'],
+  [/werkkamer|office|study/i, 'werkkamer'], [/kinderkamer|kids/i, 'kinderen'], [/tuin|garden/i, 'tuin'], [/balkon|balcony/i, 'balkon'],
+]
+function vagueSuggestions(title: string): CatalogTask[] | null {
+  const s = title.trim()
+  if (!s || (!VAGUE_NL.test(s) && !VAGUE_EN.test(s))) return null
+  const groupId = ROOM_HINTS.find(([re]) => re.test(s))?.[1] ?? 'hele-huis'
+  const group = CATALOG.find((g) => g.id === groupId) ?? CATALOG[0]
+  return group.tasks.slice(0, 3)
+}
 
 const blank = (): TaskInput => ({ title: '', room: null, minutes: 10, recurrence: 'once', weekdays: [], interval_days: 7, assignee: null, due_date: null, effort: 2 })
 
@@ -71,7 +87,26 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
         </>
       ) : (
         <form style={{ display: 'flex', flexDirection: 'column', gap: 20 }} onSubmit={(e) => { e.preventDefault(); save() }}>
-          <input className="field big" autoFocus={!task} placeholder={t('task.placeholder')} value={f.title} onChange={(e) => onTitle(e.target.value)} enterKeyHint="done" aria-label={t('task.placeholder')} />
+          <div>
+            <input className="field big" autoFocus={!task} placeholder={t('task.placeholder')} value={f.title} onChange={(e) => onTitle(e.target.value)} enterKeyHint="done" aria-label={t('task.placeholder')} />
+            {(() => {
+              const tips = vagueSuggestions(f.title)
+              if (!tips) return null
+              return (
+                <div className="vague-tip">
+                  <div className="vague-tip-head"><Icon name="sparkle" size={16} /><span>{t('task.vagueTip')}</span></div>
+                  <div className="vague-chips">
+                    {tips.map((c) => (
+                      <button key={c.id} type="button" className="vague-chip"
+                        onClick={() => { setTouched({ room: true, minutes: true }); set({ title: catTitle(c), room: c.room, minutes: c.minutes, effort: c.effort }) }}>
+                        {catTitle(c)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
 
           <div><span className="label">{t('task.room')}</span>
             <Chips value={f.room ?? ''} onChange={(v) => { setTouched((x) => ({ ...x, room: true })); set({ room: v || null }) }}
