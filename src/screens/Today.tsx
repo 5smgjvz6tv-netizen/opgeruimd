@@ -197,7 +197,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
           </div>
         )}
 
-        <div className="round-foot"><img className="ref-avatar" src={import.meta.env.BASE_URL + 'icon.svg'} alt="" /><span>{reminderNote}</span><button onClick={goSettings}>{t('common.edit')}</button></div>
+        <div className="round-foot"><img className="ref-avatar" src={import.meta.env.BASE_URL + 'bas.svg'} alt="" /><span>{reminderNote}</span><button onClick={goSettings}>{t('common.edit')}</button></div>
       </section>
 
       <button className="card challenge" onClick={goProgress}>
