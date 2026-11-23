@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { HomeLayoutPicker } from '../components/HomeLayoutPicker'
+import { LegalSheet, type LegalDoc } from '../components/LegalSheet'
+import { Sheet } from '../components/Sheet'
 import { initialLayout, roomGroups, starterTasks } from '../lib/homeLayout'
 import { catalogRow } from '../lib/catalog'
 import { SUPABASE_URL } from '../config'
@@ -102,6 +104,8 @@ export function Settings() {
           options={[{ v: 'nl', label: 'Nederlands' }, { v: 'en', label: 'English' }, { v: 'auto', label: t('set.langAuto') }]} /></div></div>
       </div>
 
+      <PrivacyAndAccount />
+
       <div className="group">
         <h3 className="group-h">{t('set.more')}</h3>
         <div className="list">
@@ -110,6 +114,83 @@ export function Settings() {
         </div>
         <p className="group-f center">{t('set.version')}</p>
       </div>
+    </div>
+  )
+}
+
+function PrivacyAndAccount() {
+  const { d } = useApp()
+  const [legal, setLegal] = useState<LegalDoc | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [err, setErr] = useState('')
+
+  function exportData() {
+    const payload = {
+      exported_at: new Date().toISOString(),
+      profile: { name: d.me.name, color: d.me.color, lang: langChoice(), fallback_time: d.me.fallback_time },
+      household: { name: d.household.name, size: d.household.size, block_minutes: d.household.block_minutes, rest_days: d.household.rest_days, rooms: d.household.rooms, home_layout: d.household.home_layout },
+      tasks: d.tasks,
+      rounds: d.items,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `opgeruimd-data-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function deleteAccount() {
+    setDeleting(true); setErr('')
+    const { error } = await sb.rpc('delete_my_account')
+    if (error) {
+      // Fallback als de RPC-migratie nog niet is uitgerold: verwijder eigen lidmaatschap en solo-huishouden.
+      const solo = d.members.length <= 1
+      const { error: mErr } = await sb.from('members').delete().eq('user_id', d.me.user_id)
+      if (mErr) { setErr(error.message); setDeleting(false); return }
+      if (solo) await sb.from('households').delete().eq('id', d.household.id)
+    }
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('opgeruimd.')) localStorage.removeItem(k)
+      sessionStorage.clear()
+    } catch { /* */ }
+    await sb.auth.signOut()
+  }
+
+  return (
+    <div className="group">
+      <h3 className="group-h">{t('set.legal')}</h3>
+      <div className="list">
+        <button className="row" onClick={() => setLegal('privacy')}>
+          <Ic name="lock" /><span className="row-main"><span className="row-title">{t('legal.privacy')}</span></span>
+          <span className="chev"><Icon name="chevron" size={16} /></span>
+        </button>
+        <button className="row" onClick={() => setLegal('terms')}>
+          <Ic name="list" tone="gray" /><span className="row-main"><span className="row-title">{t('legal.terms')}</span></span>
+          <span className="chev"><Icon name="chevron" size={16} /></span>
+        </button>
+        <button className="row" onClick={exportData}>
+          <Ic name="download" tone="gray" /><span className="row-main"><span className="row-title">{t('legal.export')}</span><span className="row-sub">{t('legal.exportSub')}</span></span>
+          <span className="chev"><Icon name="chevron" size={16} /></span>
+        </button>
+        <button className="row" onClick={() => { setErr(''); setConfirmDelete(true) }}>
+          <Ic name="x" tone="red" /><span className="row-main"><span className="row-title" style={{ color: 'var(--bad)' }}>{t('legal.delete')}</span></span>
+          <span className="chev"><Icon name="chevron" size={16} /></span>
+        </button>
+      </div>
+      <LegalSheet doc={legal} onClose={() => setLegal(null)} />
+      <Sheet open={confirmDelete} onClose={() => !deleting && setConfirmDelete(false)} title={t('legal.deleteTitle')}>
+        <p className="group-f" style={{ fontSize: 15, color: 'var(--text)' }}>{t('legal.deleteBody')}</p>
+        {err && <p className="error">{err}</p>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button className="btn danger-fill block" disabled={deleting} onClick={deleteAccount}>
+            {deleting ? <><span className="spinner" />{t('legal.deleting')}</> : t('legal.deleteConfirm')}
+          </button>
+          <button className="btn soft block" disabled={deleting} onClick={() => setConfirmDelete(false)}>{t('common.cancel')}</button>
+        </div>
+      </Sheet>
     </div>
   )
 }

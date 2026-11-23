@@ -123,3 +123,21 @@ export function badges(d: Data, userId: string, level = 1): Badge[] {
     { icon: 'clap', title: 'b.kudos', text: 'b.kudosSub', have: mine.filter((i) => i.kudos_at && i.done_by === userId).length, need: 5 })
   return list.map((b) => ({ ...b, have: Math.min(b.have, b.need) }))
 }
+
+/** Adaptief voorstel van Bas na minstens 5 actieve dagen in de app. */
+export function adaptiveRoundTip(d: Data): { kind: 'up' | 'down'; suggested: number; current: number } | null {
+  const days = new Set(d.items.map((i) => i.date))
+  if (days.size < 5) return null
+  const current = d.household.block_minutes
+  const late = overdue(d).length
+  if (late >= 3 && current < 30) return { kind: 'up', suggested: Math.min(30, current + 5), current }
+  const today = localDate()
+  let cleanStreak = 0
+  for (let i = 1; i <= 7; i++) {
+    const st = dayState(d, addDays(today, -i))
+    if (st === 'done') cleanStreak++
+    else if (st === 'partial' || st === 'missed') break
+  }
+  if (cleanStreak >= 5 && late === 0 && current > 10) return { kind: 'down', suggested: Math.max(10, current - 5), current }
+  return null
+}

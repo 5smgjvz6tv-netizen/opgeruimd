@@ -11,7 +11,7 @@ import { levelOf, weeklyChallenge, xpOf } from '../lib/game'
 import { list, locale, plural, t } from '../lib/i18n'
 import { isStandalone, pushState } from '../lib/push'
 import { room } from '../lib/rooms'
-import { streak } from '../lib/stats'
+import { adaptiveRoundTip, streak, weekStart } from '../lib/stats'
 
 const greet = () => { const h = new Date().getHours(); return t(h < 6 ? 'today.night' : h < 12 ? 'today.morning' : h < 18 ? 'today.afternoon' : 'today.evening') }
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
@@ -73,6 +73,10 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
   const s = streak(d)
   const ch = weeklyChallenge(d)
   const missing = hh.size - d.members.length
+  const adaptKey = `opgeruimd.adapt.${weekStart()}`
+  const [adaptDismissed, setAdaptDismissed] = useState(() => { try { return localStorage.getItem(adaptKey) === '1' } catch { return false } })
+  const adapt = adaptDismissed ? null : adaptiveRoundTip(d)
+  const dismissAdapt = () => { try { localStorage.setItem(adaptKey, '1') } catch { /* */ } setAdaptDismissed(true) }
 
   const toggle = (i: PlanItem, el?: Element | null) => {
     if (i.status !== 'done') { haptic(); sound('pop'); floatText(el ?? null, `+${xpItem(i)} XP`) } else haptic(4)
@@ -175,6 +179,22 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
         </span>
         {s > 0 && <span className="streak"><Icon name="flame" size={18} />{s}</span>}
       </button>
+
+      {adapt && (
+        <div className="card pad adapt-card">
+          <div className="advice-banner" style={{ padding: 0, background: 'transparent' }}>
+            <img className="ref-avatar" src={import.meta.env.BASE_URL + 'bas-rubber.webp'} alt="" />
+            <div>
+              <strong>Bas</strong>
+              <p>{t(adapt.kind === 'up' ? 'today.adaptUp' : 'today.adaptDown', { min: adapt.suggested })}</p>
+            </div>
+          </div>
+          <div className="btn-row" style={{ marginTop: 10 }}>
+            <button className="btn primary sm grow" onClick={() => { haptic(4); act.patchHousehold({ block_minutes: adapt.suggested }); dismissAdapt() }}>{t('today.adaptApply', { min: adapt.suggested })}</button>
+            <button className="btn soft sm grow" onClick={dismissAdapt}>{t('today.adaptKeep')}</button>
+          </div>
+        </div>
+      )}
 
       {(!isStandalone || push === 'off') && (
         <div className="list"><button className="row" onClick={goSettings}>

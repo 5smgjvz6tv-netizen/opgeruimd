@@ -102,3 +102,54 @@ export function starterTasks(home: HomeLayout): CatalogTask[] {
   const catalog = CATALOG.flatMap(group => group.tasks)
   return [...new Set(ids)].map(id => catalog.find(task => task.id === id)).filter((task): task is CatalogTask => !!task)
 }
+
+export type RoundAdvice = {
+  recommended: number
+  houseMinutes: number
+  perPerson: number
+  activeDays: number
+  profile: 'cleaner' | 'family' | 'wfh' | 'pet' | 'compact' | 'standard'
+  focus: 'cleaner' | 'pets' | 'kids' | 'cooking' | 'floors' | 'basics'
+}
+
+const MINUTE_STEPS = [5, 10, 15, 20, 30] as const
+
+/** Persoonlijk minuut-advies op basis van woonlagen, kamers, thuissituaties, huisgenoten en rustdagen. */
+export function recommendRound(home: HomeLayout, size: number, restDays: number[]): RoundAdvice {
+  const floors = Math.max(1, home.floors.length)
+  const roomCount = home.floors.flat().length
+  const hasPets = !!(home.cat || home.dog || home.pets)
+  let raw = 9 + (floors - 1) * 4.5 + Math.max(0, roomCount - 3) * 1.5
+  if (home.dishwasher) raw -= 2
+  if (home.cooksOften) raw += 3
+  if (home.cat) raw += 3
+  if (home.dog) raw += 4
+  else if (!home.cat && home.pets) raw += 3
+  if (home.youngKids) raw += 5
+  if (home.workFromHome) raw += 2
+  if (home.plants) raw += 1
+  if (home.garden) raw += 2
+  if (home.balcony) raw += 1
+  if (home.hasCleaner) raw *= 0.65
+
+  const activeDays = Math.max(1, 7 - restDays.length)
+  const houseMinutes = Math.max(5, Math.round((raw * 7) / activeDays / 5) * 5)
+  const perPerson = (raw / Math.max(1, size)) * (7 / activeDays)
+  const recommended = MINUTE_STEPS.reduce((best, m) => (Math.abs(m - perPerson) < Math.abs(best - perPerson) ? m : best), 15)
+
+  const profile: RoundAdvice['profile'] = home.hasCleaner ? 'cleaner'
+    : home.youngKids ? 'family'
+    : home.workFromHome ? 'wfh'
+    : hasPets ? 'pet'
+    : floors === 1 && roomCount <= 6 ? 'compact'
+    : 'standard'
+
+  const focus: RoundAdvice['focus'] = home.hasCleaner ? 'cleaner'
+    : hasPets ? 'pets'
+    : home.youngKids ? 'kids'
+    : home.cooksOften ? 'cooking'
+    : floors >= 2 ? 'floors'
+    : 'basics'
+
+  return { recommended, houseMinutes, perPerson: Math.round(perPerson), activeDays, profile, focus }
+}

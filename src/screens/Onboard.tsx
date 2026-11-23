@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Confetti, Ic, Ring, Segmented, XpBar } from '../components/Bits'
 import { HomeLayoutPicker, HousePortrait } from '../components/HomeLayoutPicker'
-import { initialLayout, starterTasks, roomGroups } from '../lib/homeLayout'
+import { LegalSheet, type LegalDoc } from '../components/LegalSheet'
+import { initialLayout, recommendRound, starterTasks, roomGroups } from '../lib/homeLayout'
 import { DayPicker, TimeSlider, Stepper } from '../components/Controls'
 import { Bas } from '../components/Bas'
 import { Icon } from '../components/Icon'
@@ -44,6 +45,12 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
   )
   const layout = dr.layout ?? initialLayout()
   const starter = starterTasks(layout)
+  const advice = useMemo(() => recommendRound(layout, dr.size, dr.rest), [layout, dr.size, dr.rest])
+  const [pickedBlock, setPickedBlock] = useState(false)
+  useEffect(() => {
+    if (!pickedBlock && dr.path === 'new' && dr.block !== advice.recommended) set({ block: advice.recommended })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advice.recommended, pickedBlock, dr.path])
   const [accountEmail, setAccountEmail] = useState('')
   const [returnStep, setReturnStep] = useState<Step>('welcome')
   const login = () => { setReturnStep(step); go('login') }
@@ -124,28 +131,45 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
 
         {step === 'rhythm' && (
           <div className="rhythm-step">
-            <div><h1 className="ob-title">{t('ob.rhythmTitle')}</h1><p className="ob-sub">{t('ob.rhythmSub')}</p></div>
+            <div><h1 className="ob-title">{t('ob.rhythmTitle')}</h1></div>
             {dr.path === 'new' && (
-              <div className="card rhythm-card">
-                <div className="rhythm-sec">
-                  <div className="rhythm-head">
-                    <span className="label">{t('set.round')}</span>
-                    <span className="rhythm-meta">{t('ob.roundApprox', { n: Math.max(1, Math.round(dr.block / 6)) })}</span>
-                  </div>
-                  <div className="round-pills" role="radiogroup" aria-label={t('set.roundLength')}>
-                    {[5, 10, 15, 20, 30].map((m) => (
-                      <button key={m} type="button" className={'round-pill' + (dr.block === m ? ' on' : '')} aria-pressed={dr.block === m}
-                        onClick={() => { haptic(4); set({ block: m }) }}>
-                        <b>{m}</b><span>{t('common.min')}</span>
-                      </button>
-                    ))}
+              <>
+                <div className="advice-banner">
+                  <img className="ref-avatar" src={BASE + 'bas-rubber.webp'} alt="" />
+                  <div>
+                    <strong>{t(`ob.profile.${advice.profile}` as const)}</strong>
+                    <p>{dr.size > 1
+                      ? t('ob.adviceTeam', { total: advice.houseMinutes, size: dr.size, min: advice.recommended, focus: t(`ob.focus.${advice.focus}` as const) })
+                      : t('ob.adviceSolo', { min: advice.recommended, profile: t(`ob.profile.${advice.profile}` as const).toLowerCase(), focus: t(`ob.focus.${advice.focus}` as const) })}
+                    </p>
                   </div>
                 </div>
-                <div className="rhythm-sec">
-                  <span className="label">{t('set.rest')}</span>
-                  <DayPicker rest={dr.rest} onToggle={(d) => set({ rest: dr.rest.includes(d) ? dr.rest.filter((x) => x !== d) : [...dr.rest, d] })} />
+                <div className="card rhythm-card">
+                  <div className="rhythm-sec">
+                    <div className="rhythm-head">
+                      <span className="label">{t('set.round')}</span>
+                      <span className="rhythm-meta">{t('ob.roundApprox', { n: Math.max(1, Math.round(dr.block / 6)) })}</span>
+                    </div>
+                    <div className="round-pills" role="radiogroup" aria-label={t('set.roundLength')}>
+                      {[5, 10, 15, 20, 30].map((m) => (
+                        <button key={m} type="button" className={'round-pill' + (dr.block === m ? ' on' : '') + (advice.recommended === m ? ' rec' : '')} aria-pressed={dr.block === m}
+                          onClick={() => { haptic(4); setPickedBlock(true); set({ block: m }) }}>
+                          {advice.recommended === m && <em className="rec-tag">{t('ob.adviceTag')}</em>}
+                          <b>{m}</b><span>{t('common.min')}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="tempo-note">{t(dr.block === advice.recommended ? 'ob.tempo.exact' : dr.block < advice.recommended ? 'ob.tempo.light' : 'ob.tempo.extra')}</p>
+                  </div>
+                  <div className="rhythm-sec">
+                    <div className="rhythm-head">
+                      <span className="label">{t('set.rest')}</span>
+                      {dr.rest.length > 0 && <span className="rhythm-meta">{t('ob.restRecalc', { rest: dr.rest.length })}</span>}
+                    </div>
+                    <DayPicker rest={dr.rest} onToggle={(d) => set({ rest: dr.rest.includes(d) ? dr.rest.filter((x) => x !== d) : [...dr.rest, d] })} />
+                  </div>
                 </div>
-              </div>
+              </>
             )}
             <div className="card rhythm-card">
               <div className="rhythm-sec">
@@ -260,6 +284,7 @@ function Account({ dr, email, setEmail, onLogin }: EmailField & { dr: Draft; onL
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [legal, setLegal] = useState<LegalDoc | null>(null)
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setErr(''); setBusy(true)
     sessionStorage.setItem('opgeruimd.signup-email', email.trim().toLowerCase())
@@ -270,23 +295,33 @@ function Account({ dr, email, setEmail, onLogin }: EmailField & { dr: Draft; onL
   const home = dr.layout ?? initialLayout()
   const floorCount = home.floors.length === 1 ? t('layout.floorCount1') : t('layout.floorCountN', { n: home.floors.length })
   return (
-    <form className="save-form" onSubmit={submit}>
-      <div className="save-heading">
-        {dr.path === 'new' ? <HousePortrait floors={home.floors.length} /> : <img width="86" src={BASE + 'bas-rubber.webp'} alt="" />}
-        <h1 className="ob-title">{t('ob.accountTitle')}</h1>
-        <p className="ob-sub">{t('ob.accountSub')}</p>
-        {dr.path === 'new' && dr.name.trim() && (
-          <p className="save-summary">{t('ob.accountSummary', { name: dr.name.trim(), floors: floorCount, tasks: starterTasks(home).length, min: dr.block })}</p>
-        )}
-      </div>
-      <div className="group">
-        <input className="field" aria-label={t('ob.email')} type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input className="field" aria-label={t('ob.password')} type="password" autoComplete="new-password" placeholder={t('ob.password')} minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} required />
-        <p className="save-note"><Icon name="lock" size={15} /><span>{t('ob.noSpam')}</span></p>
-        {err && <p className="error">{err}</p>}
-      </div>
-      <div className="ob-foot"><button className="btn primary block" disabled={busy}>{busy ? <><span className="spinner" />{t('ob.creating')}</> : t('ob.create')}</button><button type="button" className="btn soft block" onClick={onLogin}>{t('ob.haveAccount')}</button></div>
-    </form>
+    <>
+      <form className="save-form" onSubmit={submit}>
+        <div className="save-heading">
+          {dr.path === 'new' ? <HousePortrait floors={home.floors.length} /> : <img width="86" src={BASE + 'bas-rubber.webp'} alt="" />}
+          <h1 className="ob-title">{t('ob.accountTitle')}</h1>
+          <p className="ob-sub">{t('ob.accountSub')}</p>
+          {dr.path === 'new' && dr.name.trim() && (
+            <p className="save-summary">{t('ob.accountSummary', { name: dr.name.trim(), floors: floorCount, tasks: starterTasks(home).length, min: dr.block })}</p>
+          )}
+        </div>
+        <div className="group">
+          <input className="field" aria-label={t('ob.email')} type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input className="field" aria-label={t('ob.password')} type="password" autoComplete="new-password" placeholder={t('ob.password')} minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} required />
+          <p className="save-note"><Icon name="lock" size={15} /><span>{t('ob.noSpam')}</span></p>
+          <p className="legal-inline">
+            {t('legal.agreeBefore')}
+            <button type="button" className="link" onClick={() => setLegal('terms')}>{t('legal.terms').toLowerCase()}</button>
+            {t('legal.and')}
+            <button type="button" className="link" onClick={() => setLegal('privacy')}>{t('legal.privacy').toLowerCase()}</button>
+            {t('legal.agreeAfter')}
+          </p>
+          {err && <p className="error">{err}</p>}
+        </div>
+        <div className="ob-foot"><button className="btn primary block" disabled={busy}>{busy ? <><span className="spinner" />{t('ob.creating')}</> : t('ob.create')}</button><button type="button" className="btn soft block" onClick={onLogin}>{t('ob.haveAccount')}</button></div>
+      </form>
+      <LegalSheet doc={legal} onClose={() => setLegal(null)} />
+    </>
   )
 }
 
