@@ -7,12 +7,14 @@ export type HomeLayout = {
   dishwasher: boolean
   garden: boolean
   balcony: boolean
-  robotVacuum?: boolean
-  airfryer?: boolean
-  coffeeMachine?: boolean
-  dryer?: boolean
-  bidet?: boolean
+  cat?: boolean
+  dog?: boolean
   plants?: boolean
+  workFromHome?: boolean
+  youngKids?: boolean
+  hasCleaner?: boolean
+  cooksOften?: boolean
+  // Legacy optional fields kept for backwards compatibility with saved layouts
   pets?: boolean
 }
 function suggestedFloors(count: number): string[][] {
@@ -26,7 +28,7 @@ function suggestedFloors(count: number): string[][] {
 }
 export const initialLayout = (): HomeLayout => ({
   floors: suggestedFloors(1), placements: {}, dishwasher: false, garden: false, balcony: false,
-  robotVacuum: false, airfryer: false, coffeeMachine: false, dryer: false, bidet: false, plants: false, pets: false,
+  cat: false, dog: false, plants: false, workFromHome: false, youngKids: false, hasCleaner: false, cooksOften: false,
 })
 
 function roomFloors(floors: string[][], id: string) {
@@ -66,31 +68,34 @@ export function roomGroups(home: HomeLayout) {
   const rooms = home.floors.flat()
   return [...new Set([
     ...rooms,
-    ...(rooms.includes('kinderkamer') ? ['kinderen'] : []),
+    ...(rooms.includes('kinderkamer') || home.youngKids ? ['kinderen'] : []),
+    ...(home.workFromHome ? ['werkkamer'] : []),
     'vloeren', 'hele-huis',
-    ...(home.pets ? ['huisdier'] : []),
+    ...(home.cat || home.dog || home.pets ? ['huisdier'] : []),
     ...(home.garden ? ['tuin'] : []),
     ...(home.balcony ? ['balkon'] : []),
   ])]
 }
 export function starterTasks(home: HomeLayout): CatalogTask[] {
   const rooms = home.floors.flat()
-  const floorTasks = home.floors.length === 1
-    ? [home.robotVacuum ? 'v-robot' : 'v-zuig']
-    : [home.robotVacuum ? 'v-robot' : 'v-zuig-beneden', 'v-zuig-boven', ...['v-zuig-2', 'v-zuig-3'].slice(0, home.floors.length - 2)]
+  const floorTasks = home.hasCleaner
+    ? []
+    : home.floors.length === 1
+      ? ['v-zuig']
+      : ['v-zuig-beneden', 'v-zuig-boven', ...['v-zuig-2', 'v-zuig-3'].slice(0, home.floors.length - 2)]
   const ids = [
     ...(rooms.includes('slaapkamer') ? ['s-bed-opmaken'] : []),
     ...(rooms.includes('keuken') ? ['k-vuilnis', home.dishwasher ? 'k-vaatwasser-uit' : 'k-afwas'] : []),
     ...(rooms.includes('woonkamer') ? ['w-opruimen'] : []),
     ...floorTasks,
-    ...(rooms.includes('keuken') && home.airfryer ? ['k-airfryer'] : []),
-    ...(rooms.includes('keuken') && home.coffeeMachine ? ['k-koffie'] : []),
-    ...(rooms.includes('toilet') && home.bidet ? ['t-bidet'] : []),
-    ...(rooms.includes('was') ? ['l-vouwen', ...(home.dryer ? ['l-droger'] : [])] : home.dryer ? ['l-droger'] : []),
-    ...(rooms.includes('werkkamer') ? ['o-bureau'] : []),
-    ...(rooms.includes('kinderkamer') ? ['c-speelgoed'] : []),
+    ...(rooms.includes('keuken') && home.cooksOften ? ['k-koelkast-check', 'k-theedoeken'] : []),
+    ...(rooms.includes('was') ? ['l-vouwen'] : []),
+    ...(rooms.includes('werkkamer') || home.workFromHome ? ['o-bureau'] : []),
+    ...(rooms.includes('kinderkamer') || home.youngKids ? ['c-speelgoed'] : []),
+    ...(home.cat ? ['p-bak'] : []),
+    ...(home.dog ? ['p-bakjes', ...(home.hasCleaner ? [] : ['p-haren'])] : []),
+    ...(!home.cat && !home.dog && home.pets ? ['p-bakjes'] : []),
     ...(home.plants ? ['w-planten'] : []),
-    ...(home.pets ? ['p-bakjes'] : []),
     ...(home.garden ? ['g-vegen'] : []),
     ...(home.balcony ? ['b-vegen'] : []),
   ]

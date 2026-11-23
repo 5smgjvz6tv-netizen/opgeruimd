@@ -7,16 +7,16 @@ import { floorName, resizeLayout, toggleRoom, type HomeLayout } from '../lib/hom
 import { room } from '../lib/rooms'
 
 const choices = ['keuken','woonkamer','slaapkamer','badkamer','toilet','hal','werkkamer','kinderkamer','was','zolder']
-type ExtraKey = 'dishwasher' | 'robotVacuum' | 'airfryer' | 'coffeeMachine' | 'dryer' | 'bidet' | 'plants' | 'pets'
+type ExtraKey = 'dishwasher' | 'cooksOften' | 'cat' | 'dog' | 'plants' | 'workFromHome' | 'youngKids' | 'hasCleaner'
 const EXTRAS: [ExtraKey, TKey, string][] = [
   ['dishwasher', 'layout.dishwasher', 'keuken'],
-  ['robotVacuum', 'layout.robotVacuum', 'vloeren'],
-  ['airfryer', 'layout.airfryer', 'pot'],
-  ['coffeeMachine', 'layout.coffeeMachine', 'sparkle'],
-  ['dryer', 'layout.dryer', 'was'],
-  ['bidet', 'layout.bidet', 'toilet'],
+  ['cooksOften', 'layout.cooksOften', 'pot'],
+  ['cat', 'layout.cat', 'huisdier'],
+  ['dog', 'layout.dog', 'huisdier'],
   ['plants', 'layout.plants', 'leaf'],
-  ['pets', 'layout.pets', 'huisdier'],
+  ['workFromHome', 'layout.workFromHome', 'werkkamer'],
+  ['youngKids', 'layout.youngKids', 'kinderkamer'],
+  ['hasCleaner', 'layout.hasCleaner', 'sparkle'],
 ]
 const OUTDOOR: ['garden' | 'balcony', TKey, string][] = [
   ['garden', 'room.tuin', 'buiten'],

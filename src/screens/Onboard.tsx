@@ -117,7 +117,7 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
           <>
             <div><h1 className="ob-title">{t('layout.title')}</h1><p className="ob-sub">{t('layout.intro')}</p></div>
             <HomeLayoutPicker home={layout} onChange={home => set({ layout: home, rooms: roomGroups(home), sel: starterTasks(home).map(task => task.id) })} />
-            <div className="starter-preview"><Icon name="list-check" /><div><b>{t('layout.starter')}</b><p>{starter.map(catTitle).join(' · ')}</p></div></div>
+            <div className="starter-preview"><Icon name="list-check" /><div><b>{t('layout.starter')}</b><p>{starter.map(catTitle).join(' · ')}</p>{layout.hasCleaner && <p className="cleaner-note">{t('layout.cleanerNote')}</p>}</div></div>
             {foot(t('common.next'), true, () => { set({ layout, rooms: roomGroups(layout), sel: starter.map(task => task.id) }); next() })}
           </>
         )}
