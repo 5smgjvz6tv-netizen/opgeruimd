@@ -1,5 +1,10 @@
 // English titles, search keywords and group labels for the task library (keys = catalog ids).
 export const CATALOG_EN: Record<string, { title: string; keywords: string }> = {
+  'b-vegen': { title: 'Sweep the balcony', keywords: 'leaves outdoor floor brush' },
+  'b-planten': { title: 'Water the balcony plants', keywords: 'flowers water pots outdoors' },
+  'v-zuig': { title: 'Vacuum the floor', keywords: 'vacuum clean dust floor' },
+  'v-zuig-2': { title: 'Vacuum floor 2', keywords: 'upstairs floor dust vacuum' },
+  'v-zuig-3': { title: 'Vacuum floor 3', keywords: 'upstairs floor dust vacuum' },
   'k-aanrecht': { title: 'Wipe counter and stovetop', keywords: 'clean kitchen counter hob stove wipe' },
   'k-vaatwasser-uit': { title: 'Unload the dishwasher', keywords: 'empty dishwasher dishes plates cutlery silverware' },
   'k-afwas': { title: 'Wash the dishes', keywords: 'handwash dishes pots pans washing up' },
@@ -93,7 +98,7 @@ export const CATALOG_EN: Record<string, { title: string; keywords: string }> = {
   'p-haren': { title: 'Vacuum pet hair off the sofa and rugs', keywords: 'fur hair cat dog couch sofa rugs vacuum' },
   'p-mand': { title: 'Wash the pet bed', keywords: 'pet dog cat bed basket cushion bedding' },
 
-  'g-vegen': { title: 'Sweep the balcony or patio', keywords: 'balcony patio terrace deck broom leaves sweep' },
+  'g-vegen': { title: 'Sweep the patio', keywords: 'balcony patio terrace deck broom leaves sweep' },
   'g-planten': { title: 'Water the garden plants', keywords: 'garden outdoor plants flowers water' },
   'g-gras': { title: 'Mow the lawn', keywords: 'grass lawn mower cut mow' },
   'g-onkruid': { title: 'Pull the weeds', keywords: 'weeds weeding garden paving patio' },
@@ -127,7 +132,7 @@ export const GROUPS_EN: Record<string, string> = {
   werkkamer: 'Home office',
   kinderen: 'Kids’ room',
   huisdier: 'Pets',
-  buiten: 'Garden and balcony',
+  tuin: 'Garden', balkon: 'Balcony',
   'hele-huis': 'Whole house',
   auto: 'Car and bike',
 }

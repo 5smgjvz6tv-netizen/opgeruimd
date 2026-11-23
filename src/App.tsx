@@ -1,29 +1,37 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef, useSyncExternalStore } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { Icon } from './components/Icon'
 import { LogSheet } from './components/LogSheet'
 import { TaskSheet } from './components/TaskSheet'
 import { actions, Ctx, sb, useHousehold, type Task } from './lib/data'
-import { t } from './lib/i18n'
+import { lang, langChoice, t } from './lib/i18n'
 import { loadDraft } from './lib/setup'
 import { Onboard } from './screens/Onboard'
 import { Settings } from './screens/Settings'
 import { Tasks } from './screens/Tasks'
 import { Today } from './screens/Today'
 import { Together } from './screens/Together'
+import { OfflineRound } from './screens/OfflineRound'
 import { Tour } from './screens/Tour'
 import { applyDraft } from './lib/setup'
 
+function subscribeLanguage(update: () => void) {
+  window.addEventListener('opgeruimd-language', update)
+  return () => window.removeEventListener('opgeruimd-language', update)
+}
 export function App() {
+  useSyncExternalStore(subscribeLanguage, () => lang + langChoice())
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   useEffect(() => {
-    sb.auth.getSession().then(async ({ data }) => {
-      if (data.session && (await sb.auth.getUser()).error) { await sb.auth.signOut(); return setSession(null) }
-      setSession(data.session)
+    const { data } = sb.auth.onAuthStateChange((event, s) => {
+      if (s) localStorage.setItem('opgeruimd.last-user', s.user.id)
+      else if (event === 'SIGNED_OUT') localStorage.removeItem('opgeruimd.last-user')
+      setSession(s)
     })
-    const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => data.subscription.unsubscribe()
   }, [])
+  const lastUser = !session && !navigator.onLine && localStorage.getItem('opgeruimd.last-user')
+  if (lastUser) return <OfflineRound uid={lastUser} retry={() => location.reload()} message="" />
   if (session === undefined) return <Splash />
   if (!session) return <Onboard onDone={() => {}} />
   return <Home userId={session.user.id} key={session.user.id} />
@@ -32,25 +40,34 @@ export function App() {
 type Tab = 'today' | 'tasks' | 'together' | 'settings'
 
 function Home({ userId }: { userId: string }) {
-  const { data, setData, load } = useHousehold(userId)
+  const { data, setData, load, unavailable, syncError } = useHousehold(userId)
   const [tab, setTab] = useState<Tab>('today')
   const [sheet, setSheet] = useState<{ open: boolean; task: Task | null }>({ open: false, task: null })
   const [log, setLog] = useState<{ open: boolean; task: Task | null }>({ open: false, task: null })
-  const [scrolled, setScrolled] = useState(false)
   const [applying, setApplying] = useState(false)
+  const [setupAttempt, setSetupAttempt] = useState(0)
+  const [setupError, setSetupError] = useState('')
+  const attempted = useRef(false)
   useEffect(() => {
-    const on = () => setScrolled(scrollY > 56)
-    addEventListener('scroll', on, { passive: true })
-    return () => removeEventListener('scroll', on)
-  }, [])
-  // Ingelogd zonder huishouden maar met onboarding-keuzes: die meteen toepassen.
-  useEffect(() => {
+    if (data === undefined || unavailable || attempted.current) return
+    if (data) { sessionStorage.removeItem('opgeruimd.signup-email'); return }
     const draft = loadDraft()
-    if (data === null && draft?.name && !applying) { setApplying(true); applyDraft(draft, userId).finally(() => { setApplying(false); load() }) }
-  }, [data, userId, applying, load])
+    const signup = sessionStorage.getItem('opgeruimd.signup-email')
+    if (!signup || !draft?.name) return
+    attempted.current = true
+    setApplying(true)
+    sb.auth.getSession().then(async ({ data: auth }) => {
+      if (auth.session?.user.email?.toLowerCase() === signup) {
+        await applyDraft(draft, userId); await load()
+      }
+      sessionStorage.removeItem('opgeruimd.signup-email')
+    }).catch(e => setSetupError(e.message)).finally(() => setApplying(false))
+  }, [data, unavailable, userId, load, setupAttempt])
   const value = useMemo(() => data && { d: data, act: actions(data, (fn) => setData((x) => (x ? fn(x) : x)), load) }, [data, setData, load])
   const go = (x: Tab) => { setTab(x); scrollTo({ top: 0 }) }
 
+  if (unavailable) return <OfflineRound uid={userId} retry={load} message={syncError} />
+  if (setupError) return <main className="ob"><p role="alert">{setupError}</p><button className="btn primary" onClick={() => { attempted.current = false; setSetupError(''); setSetupAttempt(n => n + 1) }}>{t('offline.retry')}</button></main>
   if (data === undefined || applying) return <Splash />
   if (data === null || !value) return <Onboard authed userId={userId} onDone={load} />
   if (!data.me.onboarded_at) {
@@ -77,7 +94,6 @@ function Home({ userId }: { userId: string }) {
         {tab === 'settings' && <Settings />}
       </main>
       {tab === 'today' && <button className="fab" onClick={() => setSheet({ open: true, task: null })} aria-label={t('task.new')}><Icon name="plus" size={24} /></button>}
-      <div className={'topbar' + (scrolled ? ' show' : '')} aria-hidden="true">{TABS.find((x) => x.id === tab)?.label}</div>
       <nav className="tabbar">
         <span className="tab-ind" style={{ transform: `translateX(${TABS.findIndex((x) => x.id === tab) * 100}%)` }} />
         {TABS.map((x) => (

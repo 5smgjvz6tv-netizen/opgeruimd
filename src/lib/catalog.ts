@@ -86,6 +86,9 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
     ['l-droger', 'Pluizenfilter droger legen', 2, 1, 3, 'droger filter pluis'],
   ] },
   { id: 'vloeren', label: 'Vloeren', icon: 'vloeren', room: 'overig', tasks: [
+    ['v-zuig', 'Stofzuigen', 10, 2, 4, 'vloer stofzuiger'],
+    ['v-zuig-2', 'Tweede verdieping stofzuigen', 10, 2, 7, 'vloer boven'],
+    ['v-zuig-3', 'Derde verdieping stofzuigen', 10, 2, 7, 'vloer boven'],
     ['v-zuig-beneden', 'Stofzuigen beneden', 15, 2, 'ma,do', 'stofzuiger vloer', 1, 'beneden'],
     ['v-zuig-boven', 'Stofzuigen boven', 15, 2, 'wo', 'stofzuiger vloer slaapkamer', 1, 'boven'],
     ['v-dweil-beneden', 'Dweilen beneden', 15, 3, 'vr', 'dweil mop vloer', undefined, 'beneden'],
@@ -116,13 +119,17 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
     ['p-haren', 'Haren van bank en kleden zuigen', 10, 2, 7, 'haren hond kat'],
     ['p-mand', 'Hondenmand of kattenkussen wassen', 10, 1, 30, 'mand kussen'],
   ] },
-  { id: 'buiten', label: 'Tuin en balkon', icon: 'buiten', room: 'buiten', tasks: [
-    ['g-vegen', 'Balkon of terras vegen', 10, 2, 14, 'vegen bladeren'],
+  { id: 'tuin', label: 'Tuin', icon: 'buiten', room: 'tuin', tasks: [
+    ['g-vegen', 'Terras vegen', 10, 2, 14, 'vegen bladeren'],
     ['g-planten', 'Tuinplanten water geven', 10, 1, 3, 'tuin water'],
     ['g-gras', 'Gras maaien', 30, 3, 14, 'grasmaaier gazon'],
     ['g-onkruid', 'Onkruid wieden', 20, 3, 14, 'onkruid tegels'],
     ['g-container', 'Kliko aan de straat zetten', 5, 1, 'di', 'kliko container vuilnis groen gft', 1],
     ['g-meubels', 'Tuinmeubels afnemen', 15, 1, 30, 'stoelen tafel'],
+  ] },
+  { id: 'balkon', label: 'Balkon', icon: 'huis', room: 'balkon', tasks: [
+    ['b-vegen', 'Balkon vegen', 5, 1, 14, 'bladeren vloer'],
+    ['b-planten', 'Balkonplanten water geven', 5, 1, 3, 'bloembak planten'],
   ] },
   { id: 'hele-huis', label: 'Hele huis', icon: 'huis', room: 'overig', tasks: [
     ['a-ramen-buiten', 'Ramen buitenkant lappen', 30, 3, 60, 'glazenwasser ramen'],

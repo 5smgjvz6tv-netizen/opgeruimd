@@ -1,6 +1,8 @@
 // Onboarding-keuzes (vóór het inloggen) bewaren en na het inloggen in één keer toepassen.
 import { fillPlan, localDate } from '../../supabase/functions/_shared/planner'
-import { CATALOG, catalogRow } from './catalog'
+import { lang } from './i18n'
+import { initialLayout, roomGroups, starterTasks, type HomeLayout } from './homeLayout'
+import { catalogRow } from './catalog'
 import { sb } from './data'
 
 export type Draft = {
@@ -8,6 +10,7 @@ export type Draft = {
   name: string
   color: string
   size: number
+  layout?: HomeLayout
   rooms: string[]
   sel: string[]
   block: number
@@ -24,20 +27,12 @@ const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${St
 
 /** Maak het huishouden (of doe mee) met alles wat in de onboarding is gekozen. */
 export async function applyDraft(d: Draft, userId: string) {
-  let hid: string
-  if (d.path === 'join') {
-    const { data, error } = await sb.rpc('join_household', { code: d.code, my_name: d.name })
-    if (error) throw error
-    hid = data
-  } else {
-    const { data, error } = await sb.rpc('create_household', { my_name: d.name })
-    if (error) throw error
-    hid = data
-    await sb.from('households').update({ size: d.size, rooms: d.rooms, block_minutes: d.block, rest_days: d.rest }).eq('id', hid)
-    const chosen = CATALOG.flatMap((r) => r.tasks).filter((x) => d.sel.includes(x.id))
-    if (chosen.length) await sb.from('tasks').insert(chosen.map((x) => catalogRow(x, hid)))
-  }
-  await sb.from('members').update({ color: d.color, fallback_time: d.time === null ? null : hhmm(d.time) }).eq('user_id', userId)
+  const layout = d.layout ?? initialLayout()
+  const starter = d.path === 'new' ? starterTasks(layout).map(task => catalogRow(task, '')) : []
+  const profile = { ...d, layout, rooms: roomGroups(layout), lang, reminder: d.time === null ? null : hhmm(d.time) }
+  const { data: hid, error } = await sb.rpc('finish_home_setup', { profile, starter })
+  if (error) throw error
   await fillPlan(sb, hid, localDate())
   clearDraft()
+  sessionStorage.removeItem('opgeruimd.signup-email')
 }

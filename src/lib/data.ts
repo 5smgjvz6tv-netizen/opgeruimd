@@ -4,6 +4,8 @@ import { SUPABASE_KEY, SUPABASE_URL } from '../config'
 import { addDays, ensurePlan, fillPlan, localDate, type PlanItem, type Task } from '../../supabase/functions/_shared/planner'
 import { flush } from './push'
 import { lang, t as tr } from './i18n'
+import { hasChecks, recordCheck, saveRound, syncChecks } from './offlineRound'
+import type { HomeLayout } from './homeLayout'
 import { guess } from './rooms'
 import { catalogRow, type CatalogTask } from './catalog'
 
@@ -24,18 +26,29 @@ export type Member = {
   notify: Record<string, boolean>
   onboarded_at: string | null
 }
-export type Household = { id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[]; rooms: string[] | null; size: number }
+export type Household = { home_layout?: HomeLayout | null; id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[]; rooms: string[] | null; size: number }
 export type Data = { me: Member; partner: Member | null; others: Member[]; solo: boolean; members: Member[]; household: Household; tasks: Task[]; items: PlanItem[]; xp: Record<string, number> }
 export type TaskInput = Pick<Task, 'title' | 'room' | 'minutes' | 'recurrence' | 'weekdays' | 'interval_days' | 'assignee' | 'due_date' | 'effort'>
 
 /** Laadt alles van het huishouden en blijft live in sync met de andere telefoon. */
 export function useHousehold(userId: string) {
   const [data, setData] = useState<Data | null | undefined>(undefined)
+  const [unavailable, setUnavailable] = useState(!navigator.onLine)
+  const [syncError, setSyncError] = useState('')
+  const revision = useRef(0)
   const hid = useRef<string | null>(null)
 
   const load = useCallback(async () => {
-    const { data: me } = await sb.from('members').select('*').eq('user_id', userId).maybeSingle()
-    if (!me) return setData(null)
+    const rev = ++revision.current
+    if (!navigator.onLine) { setUnavailable(true); return }
+    const { data: me, error } = await sb.from('members').select('*').eq('user_id', userId).maybeSingle()
+    if (rev !== revision.current) return
+    if (error) { setUnavailable(true); return }
+    if (!me) { setUnavailable(false); return setData(null) }
+    if (hasChecks(userId)) {
+      try { await syncChecks(userId, me.household_id); setSyncError('') }
+      catch { setSyncError(tr('offline.failed')); setUnavailable(true); return }
+    }
     if (hid.current !== me.household_id) {
       hid.current = me.household_id
       await ensurePlan(sb, me.household_id, localDate())
@@ -48,10 +61,12 @@ export function useHousehold(userId: string) {
       sb.from('plan_items').select('*').eq('household_id', h).gte('date', addDays(localDate(), -60)),
       sb.rpc('household_xp'),
     ])
+    if (rev !== revision.current) return
+    if (!hh.data || [hh, members, tasks, items, xpRows].some(result => result.error)) { setUnavailable(true); return }
     const xp: Record<string, number> = {}
     for (const r of (xpRows.data ?? []) as { user_id: string; xp: number }[]) xp[r.user_id] = Number(r.xp)
     const all = (members.data ?? []) as Member[]
-    setData({
+    const snapshot: Data = {
       me: all.find((m) => m.user_id === userId) ?? me,
       partner: all.find((m) => m.user_id !== userId) ?? null,
       others: all.filter((m) => m.user_id !== userId),
@@ -62,7 +77,9 @@ export function useHousehold(userId: string) {
       tasks: tasks.data ?? [],
       items: items.data ?? [],
       xp,
-    })
+    }
+    saveRound(snapshot)
+    setData(snapshot); setUnavailable(false); setSyncError('')
     // Taal bewaren voor meldingen van de server.
     if ((me as { lang?: string }).lang !== lang) sb.from('members').update({ lang }).eq('user_id', userId).then(() => {})
   }, [userId])
@@ -83,12 +100,15 @@ export function useHousehold(userId: string) {
       if (hid.current && day !== localDate()) { day = localDate(); await ensurePlan(sb, hid.current, day) }
       load()
     }
+    const disconnect = () => { revision.current++; setUnavailable(true) }
+    window.addEventListener('offline', disconnect)
+    window.addEventListener('online', load)
     document.addEventListener('visibilitychange', wake)
     const iv = setInterval(wake, 60_000)
-    return () => { sb.removeChannel(ch); document.removeEventListener('visibilitychange', wake); clearInterval(iv); clearTimeout(t) }
+    return () => { revision.current++; window.removeEventListener('offline', disconnect); window.removeEventListener('online', load); sb.removeChannel(ch); document.removeEventListener('visibilitychange', wake); clearInterval(iv); clearTimeout(t) }
   }, [load])
 
-  return { data, setData, load }
+  return { data, setData, load, unavailable, syncError }
 }
 
 // ——— Acties ———
@@ -110,10 +130,17 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
   return {
     async toggle(item: PlanItem) {
       const done = item.status !== 'done'
+      const at = new Date().toISOString()
       setData((x) => ({ ...x, items: x.items.map((i) => i.id === item.id
-        ? { ...i, status: done ? 'done' : 'todo', done_by: done ? me.user_id : null, done_at: done ? new Date().toISOString() : null }
+        ? { ...i, status: done ? 'done' : 'todo', done_by: done ? me.user_id : null, done_at: done ? at : null }
         : i) }))
-      await sb.rpc('toggle_item', { item: item.id, done })
+      if (item.user_id === me.user_id) {
+        recordCheck(me.user_id, hh.id, item.id, item.done_at, done, at)
+        if (!navigator.onLine) { reload(); return }
+        try { await syncChecks(me.user_id, hh.id) } catch { reload(); return }
+      } else {
+        await sb.rpc('toggle_item', { item: item.id, done })
+      }
       const rest = mine().filter((i) => i.id !== item.id && i.status !== 'done')
       if (done && item.user_id === me.user_id && !rest.length && others.length) {
         notifyOthers(tr('push.doneT', { name: me.name }), tr('push.doneB'), 'done')

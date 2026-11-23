@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { HomeLayoutPicker } from '../components/HomeLayoutPicker'
+import { initialLayout, roomGroups, starterTasks } from '../lib/homeLayout'
+import { catalogRow } from '../lib/catalog'
 import { SUPABASE_URL } from '../config'
 import { Avatar, Ic, Segmented, Switch } from '../components/Bits'
 import { DayPicker, Dial, Stepper, TimeSlider, fmtTime, toMin } from '../components/Controls'
@@ -84,6 +87,7 @@ export function Settings() {
         <p className="group-f">{size > 1 ? t('set.houseFoot') : t('set.houseFootSolo')}</p>
       </div>
 
+      <LayoutSettings />
       <Profile />
 
       <div className="group">
@@ -108,6 +112,26 @@ export function Settings() {
       </div>
     </div>
   )
+}
+
+function LayoutSettings() {
+  const { d, act } = useApp()
+  const [open, setOpen] = useState(false)
+  const [layout, setLayout] = useState(d.household.home_layout ?? initialLayout())
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  async function save() {
+    setSaving(true); setError('')
+    const { error } = await sb.rpc('save_home_layout', { layout, groups: roomGroups(layout), starter: starterTasks(layout).map(task => catalogRow(task, d.household.id)) })
+    setSaving(false)
+    if (error) return setError(error.message)
+    await act.reload(); setOpen(false)
+  }
+  return <div className="group"><button className="row card" aria-expanded={open} onClick={() => setOpen(!open)}>
+    <Ic name="huis" /><span className="row-main">{t('layout.edit')}</span><Icon name="chevron" /></button>
+    {open && <><HomeLayoutPicker home={layout} onChange={setLayout} /><p className="group-f">{t('layout.saveHint')}</p>
+      {error && <p role="alert">{error}</p>}<button className="btn primary block" disabled={saving} onClick={save}>{t('common.save')}</button></>}
+  </div>
 }
 
 function Notifications() {
@@ -143,6 +167,7 @@ function Notifications() {
 function Arrive({ url }: { url: string }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [manual, setManual] = useState(false)
   return (
     <>
       <button className="row" onClick={() => setOpen((x) => !x)} aria-expanded={open}>
@@ -154,8 +179,9 @@ function Arrive({ url }: { url: string }) {
           <li>{t('set.arriveS1')}</li><li>{t('set.arriveS2')}</li><li>{t('set.arriveS3')}</li><li>{t('set.arriveS4')}</li>
         </ol>
         <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button className="btn primary block" onClick={async () => { await navigator.clipboard.writeText(url).catch(() => {}); setCopied(true); location.href = 'shortcuts://' }}>
+          <button className="btn primary block" onClick={async () => { try { await navigator.clipboard.writeText(url); setCopied(true); location.href = 'shortcuts://' } catch { setManual(true) } }}>
             <Icon name="shortcut" size={18} />{copied ? t('set.arriveCopied') : t('set.arriveCopy')}</button>
+          {manual && <input className="field" aria-label="URL" value={url} readOnly onFocus={e => e.target.select()} />}
           <p className="group-f" style={{ padding: 0 }}>{t('set.arriveWhy')}</p>
         </div>
       </div></div>

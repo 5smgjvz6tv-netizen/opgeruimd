@@ -1,6 +1,23 @@
-// Opgeruimd service worker: alleen pushmeldingen.
-self.addEventListener('install', () => self.skipWaiting())
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
+// De build vult de lijst met de gehashte bestanden van deze release.
+const shell = /* SHELL_FILES */ []
+const cacheName = 'opgeruimd-shell-' + (shell.find(path => path.endsWith('.js')) || 'dev')
+self.addEventListener('install', event => event.waitUntil((async () => {
+  if (shell.length) await (await caches.open(cacheName)).addAll(shell)
+  await self.skipWaiting()
+})()))
+self.addEventListener('activate', event => event.waitUntil((async () => {
+  for (const key of await caches.keys()) if (key.startsWith('opgeruimd-shell-') && key !== cacheName) await caches.delete(key)
+  await self.clients.claim()
+})()))
+self.addEventListener('fetch', event => {
+  const url = new URL(event.request.url)
+  if (!shell.length || event.request.method !== 'GET' || url.origin !== self.location.origin) return
+  if (event.request.mode === 'navigate') {
+    event.respondWith(fetch(event.request).catch(() => caches.match(new URL('index.html', self.registration.scope))))
+  } else if (shell.some(path => new URL(path, self.registration.scope).href === url.href)) {
+    event.respondWith(caches.match(event.request, { ignoreVary: true }).then(hit => hit || fetch(event.request)))
+  }
+})
 
 self.addEventListener('push', (e) => {
   let d = {}
@@ -9,7 +26,7 @@ self.addEventListener('push', (e) => {
   e.waitUntil(self.registration.showNotification(title, {
     body: d.body || '',
     tag: d.tag,
-    icon: 'mark-192.png',
+    icon: 'helper-192.png',
     badge: 'icon-192.png',
     data: { url: d.url || './' },
   }))

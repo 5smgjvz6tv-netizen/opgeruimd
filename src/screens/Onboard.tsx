@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Avatar, Check, Confetti, Ic, Ring, Segmented, XpBar } from '../components/Bits'
-import { CatalogPicker } from '../components/CatalogPicker'
-import { DayPicker, Dial, TimeSlider, fmtTime } from '../components/Controls'
+import { HomeLayoutPicker } from '../components/HomeLayoutPicker'
+import { room } from '../lib/rooms'
+import { floorName, initialLayout, starterTasks, roomGroups } from '../lib/homeLayout'
+import { DayPicker, Dial, TimeSlider, Stepper, fmtTime } from '../components/Controls'
 import { Icon } from '../components/Icon'
-import { CATALOG, DEFAULT_ROOMS, catTitle, groupLabel, type CatalogTask } from '../lib/catalog'
+import { CATALOG, DEFAULT_ROOMS, catTitle } from '../lib/catalog'
 import { sb } from '../lib/data'
 import { floatText, haptic, sound } from '../lib/feel'
 import { xpOf } from '../lib/game'
@@ -12,19 +14,17 @@ import { applyDraft, loadDraft, saveDraft, type Draft } from '../lib/setup'
 import { COLORS } from './Settings'
 
 const BASE = import.meta.env.BASE_URL
-type Step = 'welcome' | 'code' | 'you' | 'house' | 'rooms' | 'tasks' | 'rhythm' | 'demo' | 'honest' | 'account' | 'login'
+type Step = 'welcome' | 'code' | 'you' | 'house' | 'rooms' | 'rhythm' | 'demo' | 'account' | 'login'
 
 const fresh = (): Draft => ({ path: 'new', name: '', color: COLORS[0], size: 2, rooms: DEFAULT_ROOMS, sel: [], block: 15, rest: [], time: 18 * 60 + 30, code: '' })
-const popularFor = (rooms: string[]) => CATALOG.filter((r) => rooms.includes(r.id)).flatMap((r) => r.tasks.filter((x) => x.popular).map((x) => x.id))
-
 /** Onboarding vóór het inloggen: kies, probeer en personaliseer. Pas aan het eind maak je een account. */
 export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?: string; onDone: () => void }) {
   const [dr, setDr] = useState<Draft>(() => loadDraft() ?? fresh())
   useEffect(() => saveDraft(dr), [dr])
   const set = (p: Partial<Draft>) => setDr((x) => ({ ...x, ...p }))
   const steps: Step[] = dr.path === 'join'
-    ? ['welcome', 'code', 'you', 'rhythm', 'demo', 'honest', ...(authed ? [] : ['account' as const])]
-    : ['welcome', 'you', 'house', 'rooms', 'tasks', 'rhythm', 'demo', 'honest', ...(authed ? [] : ['account' as const])]
+    ? ['welcome', 'code', 'you', 'rhythm', 'account']
+    : ['welcome', 'you', 'house', 'rooms', 'rhythm', 'account']
   const [step, setStep] = useState<Step>('welcome')
   const [dir, setDir] = useState(1)
   const i = steps.indexOf(step)
@@ -42,14 +42,18 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
   const foot = (label: string, ok = true, onClick: () => void = next) => (
     <div className="ob-foot"><button className="btn primary block" disabled={!ok || busy} onClick={onClick}>{busy ? <span className="spinner" /> : label}</button>{err && <p className="error center">{err}</p>}</div>
   )
-  const isLast = i === steps.length - 1
+  const layout = dr.layout ?? initialLayout()
+  const starter = starterTasks(layout)
+  const [accountEmail, setAccountEmail] = useState('')
+  const [returnStep, setReturnStep] = useState<Step>('welcome')
+  const login = () => { setReturnStep(step); go('login') }
 
   return (
     <div className="ob">
       <header className="ob-top">
         {step !== 'welcome' && step !== 'login'
-          ? <button className="icon-btn" onClick={() => go(steps[Math.max(0, i - 1)])} aria-label={t('common.back')}><Icon name="back" size={20} /></button>
-          : step === 'login' ? <button className="icon-btn" onClick={() => go('welcome')} aria-label={t('common.back')}><Icon name="back" size={20} /></button> : <span style={{ width: 36 }} />}
+          ? <button className="icon-btn" onClick={() => go(step === 'demo' ? 'rhythm' : steps[Math.max(0, i - 1)])} aria-label={t('common.back')}><Icon name="back" size={20} /></button>
+          : step === 'login' ? <button className="icon-btn" onClick={() => go(returnStep)} aria-label={t('common.back')}><Icon name="back" size={20} /></button> : <span style={{ width: 36 }} />}
         {step !== 'welcome' && step !== 'login' && <div className="ob-dots">{steps.slice(1).map((s, n) => <i key={s} className={n + 1 === i ? 'on' : n + 1 < i ? 'done' : ''} />)}</div>}
         <div style={{ width: 140 }}><Segmented value={langChoice() === 'auto' ? lang : langChoice()} onChange={(v) => setLang(v as 'nl' | 'en')} options={[{ v: 'nl', label: 'NL' }, { v: 'en', label: 'EN' }]} /></div>
       </header>
@@ -70,7 +74,7 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
             <div className="ob-foot welcome-actions">
               <button className="btn primary block" onClick={() => { set({ path: 'new' }); setDir(1); setStep('you') }}>{t('ob.start')}</button>
               <button className="btn soft block" onClick={() => { set({ path: 'join', size: 2 }); setDir(1); setStep('code') }}>{t('ob.haveCode')}</button>
-              {!authed && <button className="btn ghost block" onClick={() => go('login')}>{t('ob.haveAccount')}</button>}
+              {!authed && <button className="btn ghost block" onClick={login}>{t('ob.haveAccount')}</button>}
             </div>
           </>
         )}
@@ -100,14 +104,11 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
                 return (
                   <button key={n} className={'choice' + (on ? ' on' : '')} onClick={() => { haptic(4); set({ size: n === 3 ? Math.max(3, dr.size) : n }) }}>
                     <Ic name={icon} lg /><span className="row-main"><span className="row-title">{t(title)}</span><span className="row-sub">{t(sub)}</span>
-                      {n === 3 && on && <span style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
-                        <span className="stepper"><button onClick={() => set({ size: Math.max(3, dr.size - 1) })} aria-label="−"><Icon name="minus" size={16} /></button><b>{dr.size}</b>
-                          <button onClick={() => set({ size: Math.min(8, dr.size + 1) })} aria-label="+"><Icon name="plus" size={16} /></button></span>
-                        <span className="row-sub">{t('ob.groupCount', { n: dr.size })}</span></span>}
                     </span><span className="radio" />
                   </button>
                 )
               })}
+              {dr.size >= 3 && <div className="row"><span className="grow">{t('ob.groupCount', { n: dr.size })}</span><Stepper value={dr.size} min={3} max={8} onChange={size => set({ size })} label={t('set.size')} /></div>}
             </div>
             {foot(t('common.next'))}
           </>
@@ -115,27 +116,10 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
 
         {step === 'rooms' && (
           <>
-            <div><h1 className="ob-title">{t('ob.roomsTitle')}</h1><p className="ob-sub">{t('ob.roomsSub')}</p></div>
-            <div className="room-grid">
-              {CATALOG.map((r) => {
-                const on = dr.rooms.includes(r.id)
-                return (
-                  <button key={r.id} className={'room-tile' + (on ? ' on' : '')} aria-pressed={on} onClick={() => { haptic(4); set({ rooms: on ? dr.rooms.filter((x) => x !== r.id) : [...dr.rooms, r.id] }) }}>
-                    <Icon name={r.icon} size={28} /><span>{groupLabel(r)}</span><span className="tick"><Icon name="check" size={12} /></span>
-                  </button>
-                )
-              })}
-            </div>
-            {foot(t('common.next'), dr.rooms.length > 0, () => { if (!dr.sel.length) set({ sel: popularFor(dr.rooms) }); next() })}
-          </>
-        )}
-
-        {step === 'tasks' && (
-          <>
-            <div><h1 className="ob-title">{t('ob.tasksTitle')}</h1><p className="ob-sub">{t('ob.tasksSub')}</p></div>
-            <CatalogPicker rooms={dr.rooms} existing={new Set()} selected={new Set(dr.sel)}
-              onToggle={(x: CatalogTask) => set({ sel: dr.sel.includes(x.id) ? dr.sel.filter((y) => y !== x.id) : [...dr.sel, x.id] })} />
-            {foot(t('task.addN', { n: dr.sel.length, tasks: t(dr.sel.length === 1 ? 'common.task' : 'common.tasks') }), dr.sel.length > 0)}
+            <div><h1 className="ob-title">{t('set.house')}</h1><p className="ob-sub">{t('layout.intro')}</p></div>
+            <HomeLayoutPicker home={layout} onChange={home => set({ layout: home, rooms: roomGroups(home), sel: starterTasks(home).map(task => task.id) })} />
+            <div className="starter-preview"><Icon name="list-check" /><div><b>{t('layout.starter')}</b><p>{starter.map(catTitle).join(' · ')}</p></div></div>
+            {foot(t('common.next'), true, () => { set({ layout, rooms: roomGroups(layout), sel: starter.map(task => task.id) }); next() })}
           </>
         )}
 
@@ -143,45 +127,29 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
           <>
             <div><h1 className="ob-title">{t('ob.rhythmTitle')}</h1><p className="ob-sub">{t('ob.rhythmSub')}</p></div>
             {dr.path === 'new' && (
-              <>
+              <details className="round-options"><summary>{t('ob.roundOptions', { min: dr.block })}</summary>
                 <div className="group"><span className="label">{t('set.round')}</span>
                   <div className="list"><div className="dial-wrap"><Dial value={dr.block} min={5} max={30} step={5} onChange={(v) => set({ block: v })} label={t('set.roundLength')} />
                     <div className="dial-side"><b>{t('set.roundLength')}</b>{t('set.roundFoot', { n: Math.max(1, Math.round(dr.block / 6)) })}</div></div></div></div>
                 <div className="group"><span className="label">{t('set.rest')}</span>
                   <div className="list"><DayPicker rest={dr.rest} onToggle={(d) => set({ rest: dr.rest.includes(d) ? dr.rest.filter((x) => x !== d) : [...dr.rest, d] })} /></div>
                   <p className="group-f">{t('set.restFoot')}</p></div>
-              </>
+              </details>
             )}
             <div className="group"><span className="label">{t('set.reminder')}</span>
               <div className="list">
-                <div className="row"><Segmented value={dr.time === null ? 'arrive' : 'time'} onChange={(v) => set({ time: v === 'time' ? 18 * 60 + 30 : null })}
-                  options={[{ v: 'time', label: t('set.modeTime') }, { v: 'arrive', label: t('set.modeArrive') }]} /></div>
-                {dr.time !== null && <TimeSlider value={dr.time} onChange={(v) => set({ time: v })} />}
+                <TimeSlider value={dr.time ?? 1110} onChange={(time) => set({ time })} />
               </div>
-              <p className="group-f">{t(dr.time !== null ? 'set.reminderFoot' : 'set.reminderFootArrive')}</p></div>
-            {foot(t('common.next'))}
+              <p className="group-f">{t('ob.timeHint')}</p></div>
+            <div className="ob-foot"><button className="btn primary block" onClick={() => { set({ time: dr.time ?? 1110 }); next() }}>{t('common.next')}</button>
+              <button className="btn ghost block" onClick={() => go('demo')}>{t('ob.demoTitle')}</button></div>
           </>
         )}
-
-        {step === 'demo' && <Demo dr={dr} onDone={next} />}
-
-        {step === 'honest' && (
-          <>
-            <div><h1 className="ob-title">{t('ob.honestTitle')}</h1><p className="ob-sub">{t('ob.honestSub')}</p></div>
-            <div className="list">
-              {([['check', undefined, 'ob.can1', 'ob.can1s'], ['check', undefined, 'ob.can2', 'ob.can2s'], ['check', undefined, 'ob.can3', 'ob.can3s'],
-                ['x', 'red', 'ob.cant1', 'ob.cant1s'], ['x', 'red', 'ob.cant2', 'ob.cant2s'], ['lock', 'gray', 'ob.private', 'ob.privateS']] as const).map(([icon, tone, a, b]) => (
-                <div key={a} className="row"><Ic name={icon} tone={tone} /><span className="row-main"><span className="row-title">{t(a)}</span><span className="row-sub">{t(b)}</span></span></div>
-              ))}
-            </div>
-            {authed ? foot(t('common.done'), true, finish) : foot(t('common.next'))}
-          </>
-        )}
-
-        {step === 'account' && <Account dr={dr} onDone={onDone} />}
-        {step === 'login' && <Login />}
+        {step === 'demo' && <Demo dr={dr} onDone={() => go('rhythm')} />}
+        {step === 'account' && (authed ? <><h1>{t('ob.accountTitle')}</h1>{foot(t('common.done'), true, finish)}</> : <Account dr={dr} email={accountEmail} setEmail={setAccountEmail} onLogin={login} />)}
+        {step === 'login' && <Login email={accountEmail} setEmail={setAccountEmail} />}
       </div>
-      {isLast && step !== 'account' && null}
+      {!authed && !['welcome','login','account'].includes(step) && <button className="link ob-login" onClick={login}>{t('ob.haveAccount')}</button>}
     </div>
   )
 }
@@ -212,7 +180,7 @@ function Demo({ dr, onDone }: { dr: Draft; onDone: () => void }) {
     const chosen = all.filter((x) => dr.sel.includes(x.id) && x.minutes <= 10).slice(0, 3)
     return chosen.length === 3 ? chosen.map((x) => ({ title: catTitle(x), minutes: x.minutes, effort: x.effort }))
       : [{ title: t('ob.demoTask1'), minutes: 5, effort: 1 }, { title: t('ob.demoTask2'), minutes: 5, effort: 1 }, { title: t('ob.demoTask3'), minutes: 10, effort: 1 }]
-  }, [dr.sel])
+  }, [dr.sel, lang])
   const [done, setDone] = useState<boolean[]>([false, false, false])
   const [timer, setTimer] = useState<number | null>(null)
   const [menu, setMenu] = useState(false)
@@ -273,37 +241,41 @@ function Demo({ dr, onDone }: { dr: Draft; onDone: () => void }) {
   )
 }
 
-function Account({ dr, onDone }: { dr: Draft; onDone: () => void }) {
-  const [email, setEmail] = useState('')
+type EmailField = { email: string; setEmail: (value: string) => void }
+function Account({ dr, email, setEmail, onLogin }: EmailField & { dr: Draft; onLogin: () => void }) {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setErr(''); setBusy(true)
+    sessionStorage.setItem('opgeruimd.signup-email', email.trim().toLowerCase())
     const { data, error } = await sb.auth.signUp({ email, password: pw })
-    if (error || !data.user) { setBusy(false); return setErr(error?.message.includes('already') ? t('ob.exists') : error?.message ?? '') }
-    try { await applyDraft(dr, data.user.id); onDone() } catch (x) { setErr((x as Error).message); setBusy(false) }
+    if (error || !data.user) { sessionStorage.removeItem('opgeruimd.signup-email'); setBusy(false); return setErr(error?.message.includes('already') ? t('ob.exists') : error?.message ?? '') }
+    if (!data.session) { setErr(t('ob.confirmEmail')); setBusy(false) }
   }
+  const home = dr.layout ?? initialLayout()
   const when = dr.time === null ? t('set.modeArrive').toLowerCase() : fmtTime(dr.time)
   return (
     <form style={{ display: 'contents' }} onSubmit={submit}>
-      <div><h1 className="ob-title">{t('ob.accountTitle')}</h1><p className="ob-sub">{t('ob.accountSub')}</p></div>
+      <div className="save-house"><img src={BASE + 'bas-mark.svg'} alt="" /><h1 className="ob-title">{t('ob.accountTitle')}</h1><p className="ob-sub">{t('ob.accountSub')}</p></div>
       <div className="list">
         <div className="row"><Avatar m={{ name: dr.name, color: dr.color }} size={34} /><span className="row-main"><span className="row-title">{dr.name}</span>
           <span className="row-sub">{dr.path === 'join' ? dr.code : t('ob.summary', { tasks: dr.sel.length, min: dr.block, when })}</span></span></div>
       </div>
+      {dr.path === 'new' && <div className="saved-layout">{home.floors.map((rooms, i) => <div key={i}>
+        <strong>{floorName(i)}</strong><span>{rooms.map(id => room(id).label).join(' · ') || '—'}</span>
+      </div>).reverse()}</div>}
       <div className="group">
-        <input className="field" type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input className="field" type="password" autoComplete="new-password" placeholder={t('ob.password')} minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} required />
+        <input className="field" aria-label={t('ob.email')} type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input className="field" aria-label={t('ob.password')} type="password" autoComplete="new-password" placeholder={t('ob.password')} minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} required />
         {err && <p className="error">{err}</p>}
       </div>
-      <div className="ob-foot"><button className="btn primary block" disabled={busy}>{busy ? <><span className="spinner" />{t('ob.creating')}</> : t('ob.create')}</button></div>
+      <div className="ob-foot"><button className="btn primary block" disabled={busy}>{busy ? <><span className="spinner" />{t('ob.creating')}</> : t('ob.create')}</button><button type="button" className="btn soft block" onClick={onLogin}>{t('ob.haveAccount')}</button></div>
     </form>
   )
 }
 
-function Login() {
-  const [email, setEmail] = useState('')
+function Login({ email, setEmail }: EmailField) {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -317,8 +289,8 @@ function Login() {
     <form style={{ display: 'contents' }} onSubmit={submit}>
       <div className="ob-hero"><img src={BASE + 'bas-mark.svg'} alt="" className="app-icon" /><h1 className="ob-title">{t('ob.loginTitle')}</h1></div>
       <div className="group">
-        <input className="field" type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input className="field" type="password" autoComplete="current-password" placeholder={t('ob.password')} value={pw} onChange={(e) => setPw(e.target.value)} required />
+        <input className="field" aria-label={t('ob.email')} type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input className="field" aria-label={t('ob.password')} type="password" autoComplete="current-password" placeholder={t('ob.password')} value={pw} onChange={(e) => setPw(e.target.value)} required />
         {err && <p className="error">{err}</p>}
       </div>
       <div className="ob-foot"><button className="btn primary block" disabled={busy}>{busy ? <span className="spinner" /> : t('ob.login')}</button></div>

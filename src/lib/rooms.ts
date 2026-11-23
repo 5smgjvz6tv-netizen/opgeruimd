@@ -13,6 +13,8 @@ export const ROOMS = [
   { id: 'werkkamer', label: 'Werkkamer', icon: 'werkkamer' },
   { id: 'kinderkamer', label: 'Kinderkamer', icon: 'kinderkamer' },
   { id: 'huisdier', label: 'Huisdier', icon: 'huisdier' },
+  { id: 'tuin', label: 'Tuin', icon: 'buiten' },
+  { id: 'balkon', label: 'Balkon', icon: 'huis' },
   { id: 'buiten', label: 'Tuin en balkon', icon: 'buiten' },
   { id: 'auto', label: 'Auto en fiets', icon: 'auto' },
   { id: 'overig', label: 'Overig', icon: 'overig' },
