@@ -181,6 +181,13 @@ import { lang } from './i18n'
 const EN = (Object.values(import.meta.glob('./catalog.en.ts', { eager: true }))[0] as
   { CATALOG_EN?: Record<string, { title: string; keywords: string }>; GROUPS_EN?: Record<string, string> } | undefined) ?? {}
 export const catTitle = (t: CatalogTask) => (lang === 'en' && EN.CATALOG_EN?.[t.id]?.title) || t.title
+const BY_ID = new Map(CATALOG.flatMap((g) => g.tasks).map((t) => [t.id, t]))
+/** Toon de taaktitel in de huidige app-taal als het een catalogustaak is (anders de eigen titel). */
+export const taskTitle = (t?: { title: string; catalog_id?: string | null } | null) => {
+  if (!t) return '—'
+  const cat = t.catalog_id ? BY_ID.get(t.catalog_id) : undefined
+  return cat ? catTitle(cat) : t.title
+}
 export const groupLabel = (g: CatalogRoom) => (lang === 'en' && EN.GROUPS_EN?.[g.id]) || g.label
 /** Zoeken in beide talen. */
 export const searchText = (t: CatalogTask) => `${t.keywords} ${EN.CATALOG_EN?.[t.id]?.title ?? ''} ${EN.CATALOG_EN?.[t.id]?.keywords ?? ''}`.toLowerCase()

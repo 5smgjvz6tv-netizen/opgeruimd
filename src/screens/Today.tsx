@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon'
 import { Sheet } from '../components/Sheet'
 import { SnoozeSheet } from '../components/SnoozeSheet'
 import { useApp, type Data, type Member, type PlanItem, type Task } from '../lib/data'
+import { taskTitle } from '../lib/catalog'
 import { floatText, haptic, sound } from '../lib/feel'
 import { levelOf, weeklyChallenge, xpOf } from '../lib/game'
 import { list, locale, plural, t } from '../lib/i18n'
@@ -71,7 +72,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
   const { me, household: hh } = d
   const today = localDate()
   const taskOf = (id: string) => d.tasks.find((x) => x.id === id)
-  const title = (id: string) => taskOf(id)?.title ?? '—'
+  const title = (id: string) => taskTitle(taskOf(id))
   const xpItem = (i: PlanItem) => xpOf(i.minutes, taskOf(i.task_id)?.effort)
   const todays = d.items.filter((i) => i.date === today)
   const mine = todays.filter((i) => i.user_id === me.user_id)
@@ -263,7 +264,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
             <div className="list" style={{ boxShadow: 'none', background: 'var(--fill)' }}>
               {extras.map((x) => (
                 <button key={x.id} className="row" onClick={() => { haptic(); act.doNow(x) }}>
-                  <Ic name={room(x.room).icon} /><span className="row-main"><span className="row-title">{x.title}</span>
+                  <Ic name={room(x.room).icon} /><span className="row-main"><span className="row-title">{taskTitle(x)}</span>
                     <span className="row-sub">{room(x.room).label}<span className="sep" />{x.minutes} {t('common.min')}</span></span>
                   <span className="xp-chip">+{xpOf(x.minutes, x.effort)}</span><Icon name="plus" size={18} />
                 </button>
@@ -417,7 +418,7 @@ function TaskRow({ item, onToggle, onMore }: { item: PlanItem; onToggle: (el?: E
   const task = d.tasks.find((x) => x.id === item.task_id)
   const r = room(task?.room ?? null)
   const done = item.status === 'done'
-  const name = task?.title ?? '—'
+  const name = taskTitle(task)
   return (
     <li className={'task' + (done ? ' done' : '')}>
       <Check done={done} onClick={(e) => onToggle(e?.currentTarget)} label={name} />
@@ -453,7 +454,7 @@ function Mate({ m, items }: { m: Member; items: PlanItem[] }) {
 function ItemMenu({ item, onClose }: { item: PlanItem | null; onClose: () => void }) {
   const { d, act } = useApp()
   const live = item && d.items.find((i) => i.id === item.id)
-  const name = live ? d.tasks.find((x) => x.id === live.task_id)?.title ?? '' : ''
+  const name = live ? taskTitle(d.tasks.find((x) => x.id === live.task_id)) : ''
   const run = (fn: () => unknown) => async () => { onClose(); await fn() }
   const nextSat = ((5 - weekday(localDate()) + 7) % 7) || 7
   const days = list('days.long')
@@ -533,7 +534,7 @@ function LearnRoutineSheet({ task, onClose }: { task: Task | null; onClose: () =
         <>
           <div className="round-coach" style={{ margin: 0 }}>
             <Bas cheer />
-            <span><b>Bas</b>{t('learn.ask', { task: task.title })}</span>
+            <span><b>Bas</b>{t('learn.ask', { task: taskTitle(task) })}</span>
           </div>
           {!pickDays ? (
             <div className="list">

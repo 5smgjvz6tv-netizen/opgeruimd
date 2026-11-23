@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { addDays, dueSince, localDate, nextDue } from '../../supabase/functions/_shared/planner'
 import { useApp, type Task } from '../lib/data'
+import { taskTitle } from '../lib/catalog'
 import { haptic, sound } from '../lib/feel'
 import { xpOf } from '../lib/game'
 import { list, locale, t } from '../lib/i18n'
@@ -76,7 +77,7 @@ export function LogSheet({ open, onClose, preset }: { open: boolean; onClose: ()
           <p className="group-f">{t('log.intro')}</p>
           {pick ? (
             <div className="list"><button className="row" onClick={() => setPick(null)}>
-              <Ic name={room(pick.room).icon} /><span className="row-main"><span className="row-title">{pick.title}</span><span className="row-sub">{t('log.change')}</span></span>
+              <Ic name={room(pick.room).icon} /><span className="row-main"><span className="row-title">{taskTitle(pick)}</span><span className="row-sub">{t('log.change')}</span></span>
               <Icon name="x" size={16} /></button></div>
           ) : (
             <div className="group">
@@ -86,7 +87,7 @@ export function LogSheet({ open, onClose, preset }: { open: boolean; onClose: ()
                 {canNew && <div className="row"><Ic name="plus" /><span className="row-main"><span className="row-title">{newTitle}</span><span className="row-sub">{t('log.new')}</span></span></div>}
                 {tasks.slice(0, 30).map((x) => (
                   <button key={x.id} className="row" onClick={() => setPick(x)}>
-                    <Ic name={room(x.room).icon} /><span className="row-main"><span className="row-title">{x.title}</span><span className="row-sub">{room(x.room).label}<span className="sep" />{x.minutes} {t('common.min')}</span></span>
+                    <Ic name={room(x.room).icon} /><span className="row-main"><span className="row-title">{taskTitle(x)}</span><span className="row-sub">{room(x.room).label}<span className="sep" />{x.minutes} {t('common.min')}</span></span>
                     <span className="chev"><Icon name="chevron" size={16} /></span>
                   </button>
                 ))}

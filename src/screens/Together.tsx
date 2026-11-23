@@ -3,6 +3,7 @@ import { addDays, localDate } from '../../supabase/functions/_shared/planner'
 import { Avatar, Ic, Ring, XpBar } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { useApp, type Member } from '../lib/data'
+import { taskTitle } from '../lib/catalog'
 import { haptic, sound } from '../lib/feel'
 import { levelOf, weeklyChallenge, xpOf } from '../lib/game'
 import { list, locale, t } from '../lib/i18n'
@@ -189,7 +190,7 @@ function Activity() {
               <div key={i.id} className="row">
                 {who ? <Avatar m={who} size={30} /> : <Ic name="check" />}
                 <span className="row-main">
-                  <span className="row-title">{task?.title ?? '—'}</span>
+                  <span className="row-title">{taskTitle(task)}</span>
                   <span className="row-sub">{!d.solo && <>{mine ? t('common.you') : who?.name}<span className="sep" /></>}
                     {day} {when.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}<span className="sep" />{i.minutes} {t('common.min')}
                     {i.helper && <><span className="sep" />{t('prog.with', { name: i.helper === d.me.user_id ? t('common.you').toLowerCase() : member(i.helper)?.name ?? '' })}</>}

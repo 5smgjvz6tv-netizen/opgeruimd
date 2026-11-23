@@ -118,7 +118,7 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
 
           <div><span className="label">{t('task.effort')}</span>
             <Chips value={f.effort} onChange={(v) => set({ effort: v })}
-              options={[{ v: 1, label: t('effort.1'), icon: 'feather' }, { v: 2, label: t('effort.2') }, { v: 3, label: t('effort.3'), icon: 'muscle' }]} />
+              options={[{ v: 1, label: t('effort.1'), icon: 'feather' }, { v: 2, label: t('effort.2'), icon: 'broom' }, { v: 3, label: t('effort.3'), icon: 'muscle' }]} />
             <p className="group-f" style={{ marginTop: 8 }}>{t('task.effortNote')} <b>+{xpOf(f.minutes, f.effort)} XP</b></p></div>
 
           <div><span className="label">{t('task.when')}</span>

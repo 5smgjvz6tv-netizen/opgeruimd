@@ -6,6 +6,7 @@ import { Bas } from '../components/Bas'
 import { Icon } from '../components/Icon'
 import { Arrive } from './Settings'
 import { sb, useApp } from '../lib/data'
+import { taskTitle } from '../lib/catalog'
 import { xpOf } from '../lib/game'
 import { plural, t } from '../lib/i18n'
 import { enablePush, isIOS, isStandalone, pushState } from '../lib/push'
@@ -81,7 +82,7 @@ function First({ onDone }: { onDone: (start: boolean) => void }) {
         {mine.map((i) => {
           const task = d.tasks.find((x) => x.id === i.task_id)
           const r = room(task?.room ?? null)
-          return <div key={i.id} className="row"><Ic name={r.icon} /><span className="row-main"><span className="row-title">{task?.title}</span>
+          return <div key={i.id} className="row"><Ic name={r.icon} /><span className="row-main"><span className="row-title">{taskTitle(task)}</span>
             <span className="row-sub">{r.label}<span className="sep" />{i.minutes} {t('common.min')}</span></span><span className="xp-chip">+{xpOf(i.minutes, task?.effort)}</span></div>
         })}
       </div>

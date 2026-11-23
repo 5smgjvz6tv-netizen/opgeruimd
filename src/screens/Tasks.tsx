@@ -4,6 +4,7 @@ import { Avatar, Ic } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { niceDate } from '../components/LogSheet'
 import { useApp, type Task } from '../lib/data'
+import { taskTitle } from '../lib/catalog'
 import { xpOf } from '../lib/game'
 import { list, t } from '../lib/i18n'
 import { room, ROOMS, scheduleLabel } from '../lib/rooms'
@@ -51,7 +52,7 @@ export function Tasks({ onEdit, onAdd }: { onEdit: (t: Task) => void; onAdd: () 
               <div key={x.id} className="row">
                 <Ic name={room(x.room).icon} tone="gold" />
                 <button className="row-main" onClick={() => onEdit(x)}>
-                  <span className="row-title">{x.title}</span>
+                  <span className="row-title">{taskTitle(x)}</span>
                   <span className="row-sub">{n === 1 ? t('tasks.lateYesterday') : t('tasks.lateDays', { n })}<span className="sep" />{x.minutes} {t('common.min')}</span>
                 </button>
                 {!planned.has(x.id) && <button className="btn tinted sm" onClick={() => act.doNow(x)}>{t('tasks.doToday')}</button>}
@@ -86,7 +87,7 @@ function TaskLine({ task, onClick }: { task: Task; onClick: () => void }) {
     <button className="row" onClick={onClick}>
       <Ic name={r.icon} />
       <span className="row-main">
-        <span className="row-title">{task.title}</span>
+        <span className="row-title">{taskTitle(task)}</span>
         <span className="row-sub">
           {task.recurrence !== 'weekly' && <>{scheduleLabel(task)}<span className="sep" /></>}
           {task.minutes} {t('common.min')}

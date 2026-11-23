@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { SUPABASE_KEY, SUPABASE_URL } from '../config'
 import { addDays, ensurePlan, fillPlan, localDate, type PlanItem, type Task } from '../../supabase/functions/_shared/planner'
 import { flush } from './push'
-import { lang, t as tr } from './i18n'
+import { lang, langChoice, setLang, t as tr } from './i18n'
 import { hasChecks, recordCheck, saveRound, syncChecks } from './offlineRound'
 import type { HomeLayout } from './homeLayout'
 import { guess } from './rooms'
@@ -80,8 +80,10 @@ export function useHousehold(userId: string) {
     }
     saveRound(snapshot)
     setData(snapshot); setUnavailable(false); setSyncError('')
-    // Taal bewaren voor meldingen van de server.
-    if ((me as { lang?: string }).lang !== lang) sb.from('members').update({ lang }).eq('user_id', userId).then(() => {})
+    // Taal synchroniseren: als dit apparaat op 'auto' staat (bijv. net op beginscherm gezet), neem de gekozen accounttaal over.
+    const savedLang = (me as { lang?: string }).lang
+    if (langChoice() === 'auto' && (savedLang === 'nl' || savedLang === 'en') && savedLang !== lang) setLang(savedLang)
+    else if (savedLang !== lang) sb.from('members').update({ lang }).eq('user_id', userId).then(() => {})
   }, [userId])
 
   useEffect(() => {
