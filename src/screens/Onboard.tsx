@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Avatar, Check, Confetti, Ic, Ring, Segmented, XpBar } from '../components/Bits'
-import { HomeLayoutPicker } from '../components/HomeLayoutPicker'
-import { room } from '../lib/rooms'
-import { floorName, initialLayout, starterTasks, roomGroups } from '../lib/homeLayout'
-import { DayPicker, Dial, TimeSlider, Stepper, fmtTime } from '../components/Controls'
+import { Check, Confetti, Ic, Ring, Segmented, XpBar } from '../components/Bits'
+import { HomeLayoutPicker, HousePortrait } from '../components/HomeLayoutPicker'
+import { initialLayout, starterTasks, roomGroups } from '../lib/homeLayout'
+import { DayPicker, Dial, TimeSlider, Stepper } from '../components/Controls'
 import { Icon } from '../components/Icon'
 import { CATALOG, DEFAULT_ROOMS, catTitle } from '../lib/catalog'
 import { sb } from '../lib/data'
@@ -16,7 +15,7 @@ import { COLORS } from './Settings'
 const BASE = import.meta.env.BASE_URL
 type Step = 'welcome' | 'code' | 'you' | 'house' | 'rooms' | 'rhythm' | 'demo' | 'account' | 'login'
 
-const fresh = (): Draft => ({ path: 'new', name: '', color: COLORS[0], size: 2, rooms: DEFAULT_ROOMS, sel: [], block: 15, rest: [], time: 18 * 60 + 30, code: '' })
+const fresh = (): Draft => ({ path: 'new', name: '', color: COLORS[Math.floor(Math.random() * COLORS.length)], size: 2, rooms: DEFAULT_ROOMS, sel: [], block: 15, rest: [], time: 18 * 60 + 30, code: '' })
 /** Onboarding vóór het inloggen: kies, probeer en personaliseer. Pas aan het eind maak je een account. */
 export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?: string; onDone: () => void }) {
   const [dr, setDr] = useState<Draft>(() => loadDraft() ?? fresh())
@@ -83,13 +82,11 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
 
         {step === 'you' && (
           <>
-            <div><h1 className="ob-title">{t('ob.youTitle')}</h1><p className="ob-sub">{t('ob.youSub')}</p></div>
-            <div className="list">
-              <label className="row"><Avatar m={{ name: dr.name || '?', color: dr.color }} size={40} />
-                <input className="field big" style={{ border: 0, background: 'transparent', padding: '6px 0' }} placeholder={t('ob.namePh')} value={dr.name} onChange={(e) => set({ name: e.target.value })} autoFocus /></label>
-              <div style={{ padding: '4px 14px 14px' }}><div className="colors">
-                {COLORS.map((c) => <button key={c} className={'swatch' + (dr.color === c ? ' on' : '')} style={{ background: c }} aria-label={c} onClick={() => { haptic(4); set({ color: c }) }} />)}
-              </div></div>
+            <div className="name-entry">
+              <h1 className="ob-title"><label htmlFor="first-name">{t('ob.youTitle')}</label></h1>
+              <input id="first-name" className="field big" placeholder={t('ob.namePh')} value={dr.name}
+                autoComplete="given-name" enterKeyHint="next" autoFocus onChange={e => set({ name: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && dr.name.trim()) next() }} />
             </div>
             {foot(t('common.next'), !!dr.name.trim())}
           </>
@@ -254,17 +251,13 @@ function Account({ dr, email, setEmail, onLogin }: EmailField & { dr: Draft; onL
     if (!data.session) { setErr(t('ob.confirmEmail')); setBusy(false) }
   }
   const home = dr.layout ?? initialLayout()
-  const when = dr.time === null ? t('set.modeArrive').toLowerCase() : fmtTime(dr.time)
   return (
-    <form style={{ display: 'contents' }} onSubmit={submit}>
-      <div className="save-house"><img src={BASE + 'bas-rubber.webp'} alt="" /><h1 className="ob-title">{t('ob.accountTitle')}</h1><p className="ob-sub">{t('ob.accountSub')}</p></div>
-      <div className="list">
-        <div className="row"><Avatar m={{ name: dr.name, color: dr.color }} size={34} /><span className="row-main"><span className="row-title">{dr.name}</span>
-          <span className="row-sub">{dr.path === 'join' ? dr.code : t('ob.summary', { tasks: dr.sel.length, min: dr.block, when })}</span></span></div>
+    <form className="save-form" onSubmit={submit}>
+      <div className="save-heading">
+        {dr.path === 'new' ? <HousePortrait floors={home.floors.length} /> : <img width="86" src={BASE + 'bas-rubber.webp'} alt="" />}
+        <h1 className="ob-title">{t('ob.accountTitle')}</h1>
+        <p className="ob-sub">{t('ob.accountSub')}</p>
       </div>
-      {dr.path === 'new' && <div className="saved-layout">{home.floors.map((rooms, i) => <div key={i}>
-        <strong>{floorName(i)}</strong><span>{rooms.map(id => room(id).label).join(' · ') || '—'}</span>
-      </div>).reverse()}</div>}
       <div className="group">
         <input className="field" aria-label={t('ob.email')} type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input className="field" aria-label={t('ob.password')} type="password" autoComplete="new-password" placeholder={t('ob.password')} minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} required />

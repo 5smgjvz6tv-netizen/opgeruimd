@@ -15,18 +15,46 @@ export function HomeLayoutPicker({ home, onChange }: { home: HomeLayout; onChang
     for (const id of home.floors.slice(count).flat()) if (!floors.flat().includes(id)) floors[count - 1].push(id)
     select(Math.min(count - 1, count > home.floors.length ? count - 1 : active)); onChange({ ...home, floors })
   }
+  const [landing, setLanding] = useState<number | null>(null)
+  function option(label: string, icon: string, checked: boolean, toggle: () => void) {
+    return <button key={label} type="button" className="room-option" aria-pressed={checked} onClick={toggle}>
+      <Icon name={icon} /><span>{label}</span><i aria-hidden="true">{checked && <Icon name="check" size={13} />}</i>
+    </button>
+  }
   return <div className="layout-picker">
-    <div className="row"><strong className="grow">{t('layout.floors')}</strong><Stepper value={home.floors.length} min={1} max={4} onChange={changeCount} label={t('layout.floors')} /></div>
-    <div className="house-section"><svg viewBox="0 0 300 42" aria-hidden="true" preserveAspectRatio="none"><path d="M3 39 150 4l147 35Z" /></svg>
-      {home.floors.map((rooms, index) => <button type="button" key={index} aria-pressed={active === index} onClick={() => select(index)}>
-        <b>{floorName(index)}</b><span>{rooms.map(id => <Icon key={id} name={room(id).icon} size={18} />)}</span>
-      </button>).reverse()}
+    <div className="floor-builder">
+      <div className="row"><strong className="grow">{t('layout.floors')}</strong><Stepper value={home.floors.length} min={1} max={4} onChange={count => {
+        setLanding(count > home.floors.length ? count - 1 : null)
+        changeCount(count)
+      }} label={t('layout.floors')} /></div>
+      <div className="house-model">
+        <img className="toy-roof" src={art('roof')} alt="" />
+        {home.floors.map((_, index) => <button type="button" key={index} aria-pressed={active === index}
+          className={landing === index ? 'landing' : ''} onClick={() => select(index)}>
+          <img src={art(index ? 'storey' : 'ground')} alt="" /><span>{floorName(index)}</span>
+        </button>).reverse()}
+      </div>
     </div>
-    <fieldset><legend>{t('layout.rooms', { floor: floorName(active) })}</legend><div className="chips">
-      {choices.map(id => <button key={id} type="button" className="layout-choice" aria-pressed={home.floors[active].includes(id)} onClick={() => onChange({ ...home, floors: home.floors.map((rooms, i) => i !== active ? rooms : rooms.includes(id) ? rooms.filter(r => r !== id) : [...rooms, id]) })}>{room(id).label}</button>)}
+    <fieldset><legend>{t('layout.rooms', { floor: floorName(active) })}</legend><div className="room-options">
+      {choices.map(id => option(room(id).label, room(id).icon, home.floors[active].includes(id), () => onChange({
+        ...home, floors: home.floors.map((rooms, i) => i !== active ? rooms : rooms.includes(id) ? rooms.filter(r => r !== id) : [...rooms, id])
+      })))}
     </div></fieldset>
-    <fieldset><legend>{t('layout.extra')}</legend><div className="chips">
-      {(['dishwasher','garden','balcony'] as const).map(key => <button type="button" className="layout-choice" key={key} aria-pressed={home[key]} onClick={() => onChange({ ...home, [key]: !home[key] })}>{t(key === 'dishwasher' ? 'layout.dishwasher' : key === 'garden' ? 'room.tuin' : 'room.balkon')}</button>)}
+    <fieldset><legend>{t('layout.extra')}</legend><div className="room-options">
+      {(['dishwasher','garden','balcony'] as const).map(key => option(
+        t(key === 'dishwasher' ? 'layout.dishwasher' : key === 'garden' ? 'room.tuin' : 'room.balkon'),
+        { dishwasher: 'keuken', garden: 'buiten', balcony: 'huis' }[key], home[key], () => onChange({ ...home, [key]: !home[key] })
+      ))}
     </div></fieldset>
+  </div>
+}
+
+const art = (piece: string) => import.meta.env.BASE_URL + 'onboarding/' + piece + '.webp'
+
+export function HousePortrait({ floors }: { floors: number }) {
+  return <div className="house-portrait" aria-hidden="true">
+    <img className="toy-roof" src={art('roof')} alt="" />
+    {Array.from({ length: floors - 1 }, (_, i) => <img key={i} src={art('storey')} alt="" />)}
+    <img src={art('ground')} alt="" />
   </div>
 }

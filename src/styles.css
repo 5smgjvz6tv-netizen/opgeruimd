@@ -337,10 +337,13 @@ button.row:active { background: var(--fill); }
 .row > .segmented { flex: 1; }
 
 
-.welcome-intro { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 12px; padding: 12px 2px 2px; }
-.welcome-mark { width: 42px; height: 42px; }
+.welcome-intro { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 4px 2px; }
+.welcome-mark { width: clamp(108px, 17dvh, 158px); aspect-ratio: 1; transform-origin: 50% 90%; }
 .welcome-intro h1 { font-size: 36px; line-height: 1.08; letter-spacing: -.045em; }
-.welcome-intro .ob-sub { grid-column: 1 / -1; max-width: 39ch; font-size: 17px; }
+.welcome-intro .ob-sub { max-width: 35ch; font-size: 16px; }
+.name-entry { margin: auto 0; padding: 28px 0; text-align: center; }
+.name-entry .field { display: block; max-width: 17rem; margin: 20px auto 0; text-align: center; background: transparent; border: 0; border-radius: 0; border-bottom: 1px solid var(--muted); font-size: 24px; color: var(--text); }
+.name-entry .field:focus { outline: 0; border-color: var(--text); box-shadow: none; }
 .round-head .ring { color: #b6f451; background: #17191c; border-radius: 50%; }
 .round-head .ring-bg { stroke: #364331; }
 .round-head .ring-fg { stroke: currentColor; }
@@ -365,29 +368,42 @@ button.row:active { background: var(--fill); }
   .tab-ind { background: #111214; }
 }
 
-/* Het dak en de vloerlijnen vormen de doorsnede; de actieve laag opent de kamerkeuze. */
-.layout-picker { background: var(--card); border-radius: var(--r); padding: 12px 14px 18px; }
-.layout-picker > .row { padding: 0; }
-.house-section { width: min(100%, 310px); margin: 6px auto 18px; }
-.house-section > svg { display: block; width: 100%; height: 36px; fill: var(--brand-soft); stroke: var(--brand); stroke-width: 3; stroke-linejoin: round; }
-.house-section > button { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: calc(100% - 20px); margin: 0 auto; min-height: 42px; padding: 8px 10px; border: solid var(--line); border-width: 0 2px 2px; font-size: 13px; }
-.house-section button[aria-pressed=true] { background: var(--brand-soft); color: var(--brand-ink); border-color: var(--brand); }
-.house-section button span { display: flex; flex-wrap: wrap; justify-content: end; gap: 3px; }
-.layout-picker fieldset { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; }
-.layout-picker legend { font-size: 13px; font-weight: 650; padding: 0; margin-bottom: 8px; }
-.layout-choice { min-height: 38px; border: 1px solid var(--line); padding: 5px 11px; border-radius: 20px; font-size: 14px; }
-.layout-choice[aria-pressed=true] { color: var(--brand-ink); background: var(--brand-soft); border-color: var(--brand); }
+.layout-picker { display: grid; gap: 22px; }
+.floor-builder { background: var(--card); border-radius: 22px; padding: 14px 16px 18px; }
+.floor-builder > .row { padding: 0; }
+.house-model { --house-width: clamp(94px, 29vw, 138px); display: grid; justify-content: center; margin-top: 20px; }
+.toy-roof { clip-path: polygon(0 88%, 48% 10%, 51% 10%, 69% 36%, 68% 4%, 69% 0, 82% 0, 83% 4%, 82% 57%, 100% 89%, 100% 100%, 0 100%); }
+.house-model > .toy-roof { width: calc(var(--house-width) * 1.04); margin-left: calc(var(--house-width) * -.02); }
+.house-model button { display: flex; align-items: center; gap: 14px; text-align: left; font-size: 13px; font-weight: 550; position: relative; color: var(--muted); }
+.house-model button img { width: var(--house-width); border-radius: 3px; }
+.house-model button span { padding: 6px 9px; border-radius: 8px; }
+.house-model button[aria-pressed=true] span { background: var(--fill); color: var(--text); font-weight: 700; }
+.layout-picker fieldset { margin: 0; border: 0; padding: 0; min-width: 0; }
+.layout-picker legend { padding: 0; margin-bottom: 10px; font-size: 17px; font-weight: 650; }
+.room-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+.room-option { display: flex; align-items: center; gap: 7px; padding: 10px; min-height: 47px; border-radius: 12px; background: var(--card); text-align: left; font-size: 14px; }
+.room-option > svg { flex: none; color: var(--muted); }
+.room-option > span { overflow-wrap: anywhere; }
+.room-option i { margin-left: auto; flex: none; width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--muted); display: grid; place-items: center; }
+.room-option[aria-pressed=true] i { background: var(--text); color: var(--card); border-color: var(--text); }
+@media (prefers-reduced-motion: no-preference) {
+  .welcome-mark { animation: bas-hello 860ms ease-in-out 150ms both; }
+  @keyframes bas-hello { 30% { transform: rotate(-7deg) translateY(-3px); } 58% { transform: rotate(5deg); } 78% { transform: rotate(-2deg); } }
+  .landing img { animation: floor-drop 440ms ease-out; }
+  @keyframes floor-drop { 0% { opacity: 0; transform: translateY(-22px); } 65% { opacity: 1; transform: translateY(2px); } }
+  .landing::after { content: ''; position: absolute; pointer-events: none; bottom: -2px; left: -5px; width: calc(var(--house-width) + 10px); height: 14px; background: radial-gradient(ellipse closest-side, #c7bba3 55%, transparent) left / 22px 10px no-repeat, radial-gradient(ellipse closest-side, #c7bba3 50%, transparent) right / 18px 12px no-repeat; opacity: 0; animation: floor-dust 420ms 200ms ease-out; }
+  @keyframes floor-dust { 25% { opacity: .65; } 100% { transform: translateY(-6px) scaleX(1.2); } }
+}
 .starter-preview { display: flex; align-items: flex-start; gap: 12px; padding: 12px 2px; }
 .starter-preview > svg { color: var(--brand-ink); }
 .starter-preview p { color: var(--muted); margin-top: 3px; font-size: 14px; }
-.save-house { display: grid; justify-items: start; gap: 8px; }
-.save-house img { width: 52px; height: 52px; }
-.save-house + .list { border: 1px solid var(--line); }
+.save-form { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+.save-heading { padding: 18px 0 0; text-align: center; }
+.house-portrait { width: 75px; margin: 0 auto 18px; }
+.house-portrait img { display: block; width: 100%; }
+.house-portrait .toy-roof { width: 104%; margin-left: -2%; }
+.save-form .ob-foot { margin-top: auto; }
 .ob-login { align-self: center; min-height: 44px; }
 .round-options { padding: 14px; background: var(--card); border-radius: var(--r); }
 .round-options summary { cursor: pointer; font-weight: 600; }
 .round-options[open] .group { margin-top: 14px; }
-.saved-layout { padding: 3px 14px; background: var(--card); border-left: 4px solid var(--brand); border-radius: 10px; }
-.saved-layout div { display: grid; gap: 3px; padding: 9px 0; font-size: 13px; }
-.saved-layout div + div { border-top: 1px solid var(--line); }
-.saved-layout span { color: var(--muted); }
