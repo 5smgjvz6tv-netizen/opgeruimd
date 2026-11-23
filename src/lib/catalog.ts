@@ -13,10 +13,11 @@ const DAY: Record<string, number> = { ma: 0, di: 1, wo: 2, do: 3, vr: 4, za: 5, 
 
 const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[] }[] = [
   { id: 'keuken', label: 'Keuken', icon: 'keuken', room: 'keuken', tasks: [
-    ['k-aanrecht', 'Aanrecht en kookplaat afnemen', 5, 1, 2, 'schoonmaken afnemen fornuis', 1],
+    ['k-vuilnis', 'Vuilnisbak legen', 5, 1, 3, 'afval prullenbak vuilniszak', 1],
     ['k-vaatwasser-uit', 'Vaatwasser uitruimen', 5, 1, 1, 'afwas servies', 1],
     ['k-afwas', 'Afwas doen', 15, 2, 2, 'vaat pannen spoelen'],
-    ['k-vuilnis', 'Vuilnisbak legen', 5, 1, 3, 'afval prullenbak vuilniszak', 1],
+    ['k-airfryer', 'Airfryer schoonmaken', 5, 1, 4, 'airfryer mandje vet'],
+    ['k-aanrecht', 'Aanrecht en kookplaat afnemen', 5, 1, 2, 'schoonmaken afnemen fornuis'],
     ['k-pmd', 'Plastic/PMD wegbrengen', 5, 1, 7, 'afval plastic recycling'],
     ['k-papier', 'Oud papier wegbrengen', 5, 1, 14, 'karton afval'],
     ['k-glas', 'Glas wegbrengen', 10, 1, 30, 'flessen glasbak'],
@@ -49,7 +50,7 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
   ] },
   { id: 'slaapkamer', label: 'Slaapkamer', icon: 'slaapkamer', room: 'slaapkamer', tasks: [
     ['s-bed', 'Bed verschonen', 15, 2, 'za', 'beddengoed dekbedovertrek laken kussensloop dekbed', 1],
-    ['s-bed-opmaken', 'Bed opmaken en luchten', 2, 1, 1, 'dekbed luchten raam'],
+    ['s-bed-opmaken', 'Bed opmaken', 2, 1, 1, 'dekbed luchten raam', 1],
     ['s-dekbed', 'Dekbed wassen', 15, 2, 90, 'dekbed wassen stomerij'],
     ['s-kussens', 'Hoofdkussens wassen', 10, 1, 90, 'kussen'],
     ['s-matras', 'Matras keren en stofzuigen', 15, 3, 90, 'matras keren draaien'],
@@ -75,10 +76,11 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
     ['t-fonteintje', 'Fonteintje en kraan afnemen', 3, 1, 7, 'wastafel toilet'],
     ['t-wc-papier', 'Wc-papier aanvullen', 1, 1, 7, 'papier rol'],
     ['t-wc-vloer', 'Toiletvloer dweilen', 5, 2, 7, 'vloer'],
+    ['t-bidet', 'Bidet schoonmaken', 5, 1, 7, 'bidet douchewc sproeier toilet'],
   ] },
   { id: 'was', label: 'Was', icon: 'was', room: 'was', tasks: [
-    ['l-donker', 'Donkere was draaien', 10, 2, 'ma', 'zwarte was wasmachine', 1],
-    ['l-licht', 'Lichte was draaien', 10, 2, 'do', 'witte was wasmachine', 1],
+    ['l-donker', 'Donkere was in de machine doen', 10, 2, 'ma', 'zwarte was donkere was wasmachine draaien', 1],
+    ['l-licht', 'Lichte was in de machine doen', 10, 2, 'do', 'witte was lichte was wasmachine draaien', 1],
     ['l-ophangen', 'Was ophangen of in de droger', 10, 1, 3, 'drogen rek droger'],
     ['l-vouwen', 'Was vouwen en opruimen', 15, 1, 3, 'vouwen kast', 1],
     ['l-strijken', 'Strijken', 20, 2, 7, 'strijkijzer overhemd'],

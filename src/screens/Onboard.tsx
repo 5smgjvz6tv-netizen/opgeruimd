@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, Confetti, Ic, Ring, Segmented, XpBar } from '../components/Bits'
 import { HomeLayoutPicker, HousePortrait } from '../components/HomeLayoutPicker'
 import { initialLayout, starterTasks, roomGroups } from '../lib/homeLayout'
-import { DayPicker, Dial, TimeSlider, Stepper } from '../components/Controls'
+import { DayPicker, TimeSlider, Stepper } from '../components/Controls'
 import { Bas } from '../components/Bas'
 import { Icon } from '../components/Icon'
 import { CATALOG, DEFAULT_ROOMS, catTitle } from '../lib/catalog'
@@ -64,6 +64,7 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
             <div className="welcome-intro">
               <Bas className="welcome-mark" />
               <h1>Opgeruimd</h1>
+              <p className="bas-intro">{t('ob.basIntro')}</p>
               <p className="ob-sub" style={{ marginTop: 0 }}>{t('app.tagline')}</p>
             </div>
             <div className="list welcome-features">
@@ -114,7 +115,7 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
 
         {step === 'rooms' && (
           <>
-            <div><h1 className="ob-title">{t('set.house')}</h1><p className="ob-sub">{t('layout.intro')}</p></div>
+            <div><h1 className="ob-title">{t('layout.title')}</h1><p className="ob-sub">{t('layout.intro')}</p></div>
             <HomeLayoutPicker home={layout} onChange={home => set({ layout: home, rooms: roomGroups(home), sel: starterTasks(home).map(task => task.id) })} />
             <div className="starter-preview"><Icon name="list-check" /><div><b>{t('layout.starter')}</b><p>{starter.map(catTitle).join(' · ')}</p></div></div>
             {foot(t('common.next'), true, () => { set({ layout, rooms: roomGroups(layout), sel: starter.map(task => task.id) }); next() })}
@@ -122,26 +123,40 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
         )}
 
         {step === 'rhythm' && (
-          <>
+          <div className="rhythm-step">
             <div><h1 className="ob-title">{t('ob.rhythmTitle')}</h1><p className="ob-sub">{t('ob.rhythmSub')}</p></div>
             {dr.path === 'new' && (
-              <details className="round-options"><summary>{t('ob.roundOptions', { min: dr.block })}</summary>
-                <div className="group"><span className="label">{t('set.round')}</span>
-                  <div className="list"><div className="dial-wrap"><Dial value={dr.block} min={5} max={30} step={5} onChange={(v) => set({ block: v })} label={t('set.roundLength')} />
-                    <div className="dial-side"><b>{t('set.roundLength')}</b>{t('set.roundFoot', { n: Math.max(1, Math.round(dr.block / 6)) })}</div></div></div></div>
-                <div className="group"><span className="label">{t('set.rest')}</span>
-                  <div className="list"><DayPicker rest={dr.rest} onToggle={(d) => set({ rest: dr.rest.includes(d) ? dr.rest.filter((x) => x !== d) : [...dr.rest, d] })} /></div>
-                  <p className="group-f">{t('set.restFoot')}</p></div>
-              </details>
-            )}
-            <div className="group"><span className="label">{t('set.reminder')}</span>
-              <div className="list">
-                <TimeSlider value={dr.time ?? 1110} onChange={(time) => set({ time })} />
+              <div className="card rhythm-card">
+                <div className="rhythm-sec">
+                  <div className="rhythm-head">
+                    <span className="label">{t('set.round')}</span>
+                    <span className="rhythm-meta">{t('ob.roundApprox', { n: Math.max(1, Math.round(dr.block / 6)) })}</span>
+                  </div>
+                  <div className="round-pills" role="radiogroup" aria-label={t('set.roundLength')}>
+                    {[5, 10, 15, 20, 30].map((m) => (
+                      <button key={m} type="button" className={'round-pill' + (dr.block === m ? ' on' : '')} aria-pressed={dr.block === m}
+                        onClick={() => { haptic(4); set({ block: m }) }}>
+                        <b>{m}</b><span>{t('common.min')}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="rhythm-sec">
+                  <span className="label">{t('set.rest')}</span>
+                  <DayPicker rest={dr.rest} onToggle={(d) => set({ rest: dr.rest.includes(d) ? dr.rest.filter((x) => x !== d) : [...dr.rest, d] })} />
+                </div>
               </div>
-              <p className="group-f">{t('ob.timeHint')}</p></div>
+            )}
+            <div className="card rhythm-card">
+              <div className="rhythm-sec">
+                <span className="label">{t('set.reminder')}</span>
+                <TimeSlider value={dr.time ?? 1110} onChange={(time) => set({ time })} />
+                <p className="group-f">{t('ob.timeHint')}</p>
+              </div>
+            </div>
             <div className="ob-foot"><button className="btn primary block" onClick={() => { set({ time: dr.time ?? 1110 }); next() }}>{t('common.next')}</button>
               <button className="btn ghost block" onClick={() => go('demo')}>{t('ob.demoTitle')}</button></div>
-          </>
+          </div>
         )}
         {step === 'demo' && <Demo dr={dr} onDone={() => go('rhythm')} />}
         {step === 'account' && (authed ? <><h1>{t('ob.accountTitle')}</h1>{foot(t('common.done'), true, finish)}</> : <Account dr={dr} email={accountEmail} setEmail={setAccountEmail} onLogin={login} />)}
@@ -174,11 +189,12 @@ function CodeStep({ code, onCode, onNext }: { code: string; onCode: (c: string) 
 /** Mini-opruimronde om te spelen: afvinken (XP), timer starten, opties openen, ring sluiten. */
 function Demo({ dr, onDone }: { dr: Draft; onDone: () => void }) {
   const picks = useMemo(() => {
+    const starter = starterTasks(dr.layout ?? initialLayout()).filter((x) => x.minutes <= 10)
     const all = CATALOG.flatMap((r) => r.tasks)
-    const chosen = all.filter((x) => dr.sel.includes(x.id) && x.minutes <= 10).slice(0, 3)
+    const chosen = starter.length >= 3 ? starter.slice(0, 3) : all.filter((x) => dr.sel.includes(x.id) && x.minutes <= 10).slice(0, 3)
     return chosen.length === 3 ? chosen.map((x) => ({ title: catTitle(x), minutes: x.minutes, effort: x.effort }))
       : [{ title: t('ob.demoTask1'), minutes: 5, effort: 1 }, { title: t('ob.demoTask2'), minutes: 5, effort: 1 }, { title: t('ob.demoTask3'), minutes: 10, effort: 1 }]
-  }, [dr.sel, lang])
+  }, [dr.layout, dr.sel, lang])
   const [done, setDone] = useState<boolean[]>([false, false, false])
   const [timer, setTimer] = useState<number | null>(null)
   const [menu, setMenu] = useState(false)
@@ -252,16 +268,21 @@ function Account({ dr, email, setEmail, onLogin }: EmailField & { dr: Draft; onL
     if (!data.session) { setErr(t('ob.confirmEmail')); setBusy(false) }
   }
   const home = dr.layout ?? initialLayout()
+  const floorCount = home.floors.length === 1 ? t('layout.floorCount1') : t('layout.floorCountN', { n: home.floors.length })
   return (
     <form className="save-form" onSubmit={submit}>
       <div className="save-heading">
         {dr.path === 'new' ? <HousePortrait floors={home.floors.length} /> : <img width="86" src={BASE + 'bas-rubber.webp'} alt="" />}
         <h1 className="ob-title">{t('ob.accountTitle')}</h1>
         <p className="ob-sub">{t('ob.accountSub')}</p>
+        {dr.path === 'new' && dr.name.trim() && (
+          <p className="save-summary">{t('ob.accountSummary', { name: dr.name.trim(), floors: floorCount, tasks: starterTasks(home).length, min: dr.block })}</p>
+        )}
       </div>
       <div className="group">
         <input className="field" aria-label={t('ob.email')} type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input className="field" aria-label={t('ob.password')} type="password" autoComplete="new-password" placeholder={t('ob.password')} minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} required />
+        <p className="save-note"><Icon name="lock" size={15} /><span>{t('ob.noSpam')}</span></p>
         {err && <p className="error">{err}</p>}
       </div>
       <div className="ob-foot"><button className="btn primary block" disabled={busy}>{busy ? <><span className="spinner" />{t('ob.creating')}</> : t('ob.create')}</button><button type="button" className="btn soft block" onClick={onLogin}>{t('ob.haveAccount')}</button></div>

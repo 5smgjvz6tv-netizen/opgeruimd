@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CATALOG, type CatalogTask } from '../lib/catalog'
+import { CATALOG, DEFAULT_ROOMS, type CatalogTask } from '../lib/catalog'
 import { useApp, type Task, type TaskInput } from '../lib/data'
 import { xpOf } from '../lib/game'
+import { roomGroups } from '../lib/homeLayout'
 import { list, plural, t } from '../lib/i18n'
 import { guess, room, ROOMS } from '../lib/rooms'
 import { Chips, Segmented } from './Bits'
@@ -18,6 +19,11 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
   const [mode, setMode] = useState<'lib' | 'own'>('lib')
   const [sel, setSel] = useState<Set<string>>(new Set())
   const existing = new Set(d.tasks.filter((x) => !x.archived && x.catalog_id).map((x) => x.catalog_id!))
+  const existingTitles = new Set(d.tasks.filter((x) => !x.archived).map((x) => x.title.trim().toLowerCase()))
+  const activeRooms = d.household.home_layout
+    ? roomGroups(d.household.home_layout)
+    : d.household.rooms?.length ? d.household.rooms : DEFAULT_ROOMS
+  const roomChoices = ROOMS.filter((r) => r.id !== 'buiten')
 
   useEffect(() => {
     if (!open) return
@@ -58,7 +64,7 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
 
       {mode === 'lib' && !task ? (
         <>
-          <CatalogPicker rooms={d.household.rooms} selected={sel} onToggle={toggle} existing={existing} />
+          <CatalogPicker rooms={activeRooms} selected={sel} onToggle={toggle} existing={existing} existingTitles={existingTitles} />
           <button className="btn primary block sticky-cta" onClick={addSelected} disabled={!sel.size || busy}>
             {busy ? <span className="spinner" /> : sel.size ? t('task.addN', { n: sel.size, tasks: plural(sel.size) }) : t('task.pickSome')}
           </button>
@@ -69,7 +75,7 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
 
           <div><span className="label">{t('task.room')}</span>
             <Chips value={f.room ?? ''} onChange={(v) => { setTouched((x) => ({ ...x, room: true })); set({ room: v || null }) }}
-              options={ROOMS.map((r) => ({ v: r.id as string, label: room(r.id).label, icon: r.icon }))} /></div>
+              options={roomChoices.map((r) => ({ v: r.id as string, label: room(r.id).label, icon: r.icon }))} /></div>
 
           <div><span className="label">{t('task.duration')}</span>
             <Chips value={f.minutes} onChange={(v) => { setTouched((x) => ({ ...x, minutes: true })); set({ minutes: v }) }}

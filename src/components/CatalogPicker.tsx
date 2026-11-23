@@ -7,8 +7,8 @@ import { Ic } from './Bits'
 import { Icon } from './Icon'
 
 /** Taken kiezen uit de bibliotheek: zoeken of per ruimte openklappen, meerdere tegelijk. */
-export function CatalogPicker({ rooms, selected, onToggle, existing }: {
-  rooms: string[] | null; selected: Set<string>; onToggle: (t: CatalogTask) => void; existing: Set<string>
+export function CatalogPicker({ rooms, selected, onToggle, existing, existingTitles }: {
+  rooms: string[] | null; selected: Set<string>; onToggle: (t: CatalogTask) => void; existing: Set<string>; existingTitles?: Set<string>
 }) {
   const [q, setQ] = useState('')
   const [allRooms, setAllRooms] = useState(false)
@@ -17,7 +17,7 @@ export function CatalogPicker({ rooms, selected, onToggle, existing }: {
   const results = q.trim() ? searchCatalog(q, allRooms ? undefined : rooms ?? undefined) : null
 
   const row = (task: CatalogTask) => {
-    const have = existing.has(task.id)
+    const have = existing.has(task.id) || !!existingTitles?.has(catTitle(task).trim().toLowerCase()) || !!existingTitles?.has(task.title.trim().toLowerCase())
     const on = selected.has(task.id) || have
     return (
       <button key={task.id} className={'row pick-row' + (have ? ' have' : '')} onClick={() => !have && onToggle(task)} disabled={have} aria-pressed={on}>

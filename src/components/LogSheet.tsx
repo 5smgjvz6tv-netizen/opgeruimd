@@ -98,9 +98,10 @@ export function LogSheet({ open, onClose, preset }: { open: boolean; onClose: ()
           <div><span className="label">{t('log.duration')}</span>
             <Chips value={minutes} onChange={setMins} options={[5, 10, 15, 20, 30, 45, 60].map((v) => ({ v, label: `${v} ${t('common.min')}` }))} /></div>
           <div><span className="label">{t('log.when')}</span>
-            <Chips value={when} onChange={setWhen} options={[0, 1, 2, 3, 4, 5, 6].map((n) => ({
-              v: n, label: n === 0 ? t('common.today') : n === 1 ? t('common.yesterday') : dayLabels[(new Date(addDays(today, -n) + 'T12:00:00Z').getUTCDay() + 6) % 7],
-            }))} /></div>
+            <Chips value={when} onChange={setWhen} options={[0, 1, 2, 3, 4, 5, 6].map((n) => {
+              const raw = dayLabels[(new Date(addDays(today, -n) + 'T12:00:00Z').getUTCDay() + 6) % 7]
+              return { v: n, label: n === 0 ? t('common.today') : n === 1 ? t('common.yesterday') : raw[0].toUpperCase() + raw.slice(1) }
+            })} /></div>
           {d.others.length > 0 && <div className="list">{d.others.map((o) => (
             <label key={o.user_id} className="row"><span className="row-main"><span className="row-title">{t('log.with', { name: o.name })}</span></span>
               <Switch on={withId === o.user_id} onChange={(v) => setWithId(v ? o.user_id : null)} label={t('log.with', { name: o.name })} /></label>

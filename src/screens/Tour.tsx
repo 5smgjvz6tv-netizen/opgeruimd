@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fillPlan, localDate, suggestExtras } from '../../supabase/functions/_shared/planner'
 import { Ic } from '../components/Bits'
+import { Bas } from '../components/Bas'
 import { Icon } from '../components/Icon'
 import { sb, useApp } from '../lib/data'
 import { xpOf } from '../lib/game'
@@ -72,6 +73,7 @@ function First({ onDone }: { onDone: (start: boolean) => void }) {
     <>
       <div><h1 className="ob-title">{t('tour.firstTitle')}</h1>
         <p className="ob-sub">{mine.length ? t('tour.firstSub', { n: mine.length, tasks: plural(mine.length), min: total, xp }) : t('tour.preparing')}</p></div>
+      <div className="round-coach"><Bas /><span><b>Bas</b>{t('tour.basWelcome', { name: d.me.name })}</span></div>
       <div className="list">
         {!ready && !mine.length && <div className="row"><div className="skeleton grow" /></div>}
         {mine.map((i) => {

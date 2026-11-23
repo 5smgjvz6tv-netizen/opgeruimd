@@ -10,6 +10,8 @@ export function Bas({ cheer = false, className = '' }: { cheer?: boolean; classN
   </span>
 }
 
+const lowerFirst = (s: string) => (s.length > 1 && s[1] === s[1].toLowerCase() ? s[0].toLowerCase() + s.slice(1) : s)
+
 export function RoundCoach({ done, total, nextTask }: { done: number; total: number; nextTask?: string }) {
   const previous = useRef(done)
   const [cheering, setCheering] = useState(false)
@@ -26,6 +28,6 @@ export function RoundCoach({ done, total, nextTask }: { done: number; total: num
   const complete = done === total
   return <div className="round-coach">
     <Bas key={done} cheer={cheering || complete} />
-    <span aria-live="polite"><b>Bas</b>{complete ? t('bas.finish') : cheering ? t('bas.cheer') : t('bas.start', { task: nextTask ?? '' })}</span>
+    <span aria-live="polite"><b>Bas</b>{complete ? t('bas.finish') : cheering ? t('bas.cheer') : t('bas.start', { task: lowerFirst(nextTask ?? '') })}</span>
   </div>
 }

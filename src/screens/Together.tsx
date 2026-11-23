@@ -130,14 +130,14 @@ function Scoreboard() {
               <span className="row-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{name(m)}{lead?.user_id === m.user_id && <span className="crown"><Icon name="crown" size={16} /></span>}
                 <span className="tag gray">{t('level.short', { n: levelOf(d.xp[m.user_id] ?? 0).n })}</span></span>
               <XpBar frac={now[m.user_id].pts / max} color={m.color} />
-              <span className="row-sub">{now[m.user_id].min} {t('common.min')}<span className="sep" />{t('prog.tasksN', { n: now[m.user_id].count })}</span>
+              <span className="row-sub">{now[m.user_id].min} {t('common.min')}<span className="sep" />{now[m.user_id].count === 1 ? t('prog.tasks1') : t('prog.tasksN', { n: now[m.user_id].count })}</span>
             </span>
             <span className="player-score">{now[m.user_id].pts} <small className="muted">XP</small></span>
           </div>
         ))}
       </div>
       <p className="group-f">
-        {!ranked.some((m) => now[m.user_id].pts) ? t('prog.noneYet') : lead ? (lead.user_id === d.me.user_id ? t('prog.leadYou', { n: gap }) : t('prog.lead', { name: lead.name, n: gap })) : t('prog.tie')}
+        {ranked.length < 2 ? t('prog.waitingMate') : !ranked.some((m) => now[m.user_id].pts) ? t('prog.noneYet') : lead ? (lead.user_id === d.me.user_id ? t('prog.leadYou', { n: gap }) : t('prog.lead', { name: lead.name, n: gap })) : t('prog.tie')}
         {lastWin && <> · {lastWin.user_id === d.me.user_id ? t('prog.lastWeekYou') : t('prog.lastWeek', { name: lastWin.name })}</>}
         <br />{t('prog.pointsInfo')}
       </p>
@@ -160,7 +160,7 @@ function SoloWeek() {
         <div className="row"><Ic name="star" tone="gold" /><span className="row-main"><span className="row-title">{now.pts} XP</span>
           <span className="row-sub">{t('prog.vsLast', { diff: (diff >= 0 ? '+' : '') + diff })}</span></span></div>
         <div className="row"><Ic name="clock" /><span className="row-main"><span className="row-title">{now.min} {t('common.min')}</span>
-          <span className="row-sub">{t('prog.tasksN', { n: now.count })}</span></span></div>
+          <span className="row-sub">{now.count === 1 ? t('prog.tasks1') : t('prog.tasksN', { n: now.count })}</span></span></div>
         <div className="row"><Ic name="trophy" tone="gold" /><span className="row-main"><span className="row-title">{t('prog.best', { xp: best })}</span></span></div>
       </div>
       <p className="group-f">{t('prog.pointsInfo')}</p>

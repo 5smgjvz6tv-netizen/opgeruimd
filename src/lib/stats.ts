@@ -63,7 +63,7 @@ export function roomScores(d: Data) {
   const today = localDate()
   const taskScore = (t: Data['tasks'][number]) => {
     const since = dueSince(t, today)
-    return since ? Math.max(0, 0.75 - daysBetween(since, today) * 0.25) : 1
+    return since && since < today ? Math.max(0, 1 - daysBetween(since, today) * 0.25) : 1
   }
   const active = d.tasks.filter((t) => !t.archived)
   const rooms = ROOMS.map((r) => {

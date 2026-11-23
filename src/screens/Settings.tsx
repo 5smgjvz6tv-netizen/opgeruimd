@@ -128,7 +128,8 @@ function LayoutSettings() {
     await act.reload(); setOpen(false)
   }
   return <div className="group"><button className="row card" aria-expanded={open} onClick={() => setOpen(!open)}>
-    <Ic name="huis" /><span className="row-main">{t('layout.edit')}</span><Icon name="chevron" /></button>
+    <Ic name="huis" /><span className="row-main"><span className="row-title">{t('layout.edit')}</span></span>
+    <span className="chev" style={{ transform: open ? 'rotate(90deg)' : '', transition: 'transform 260ms' }}><Icon name="chevron" size={16} /></span></button>
     {open && <><HomeLayoutPicker home={layout} onChange={setLayout} /><p className="group-f">{t('layout.saveHint')}</p>
       {error && <p role="alert">{error}</p>}<button className="btn primary block" disabled={saving} onClick={save}>{t('common.save')}</button></>}
   </div>
@@ -201,7 +202,7 @@ function Profile() {
           <input className="field" style={{ border: 0, padding: '6px 0', background: 'transparent' }} value={name} aria-label={t('set.name')}
             onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name.trim() !== me.name && act.patchMe({ name: name.trim() })} /></label>
         <div className="row"><Ic name="palette" /><span className="row-main"><span className="row-title">{t('set.color')}</span></span></div>
-        <div style={{ padding: '0 14px 14px 56px' }}><div className="colors">
+        <div style={{ padding: '0 14px 14px 52px' }}><div className="colors">
           {COLORS.map((c) => <button key={c} className={'swatch' + (me.color === c ? ' on' : '')} style={{ background: c }} aria-label={c} aria-pressed={me.color === c} onClick={() => { haptic(4); act.patchMe({ color: c }) }} />)}
         </div></div>
       </div>
@@ -217,7 +218,7 @@ function Feel() {
       <label className="row"><Ic name={on ? 'sound' : 'sound-off'} tone="gray" /><span className="row-main"><span className="row-title">{t('set.sound')}</span></span>
         <Switch on={on} label={t('set.sound')} onChange={(v) => { setSound(v); setOn(v); if (v) setTimeout(() => sound('pop'), 50) }} /></label>
       <button className="row" onClick={() => haptic([10, 60, 10])}><Ic name="vibrate" tone="gray" /><span className="row-main"><span className="row-title">{t('set.haptics')}</span></span>
-        <span className="row-val">{t('common.on')}</span></button>
+        <span className="row-val">{t('set.notifTest')}</span></button>
     </div>
   )
 }

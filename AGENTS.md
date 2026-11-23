@@ -13,8 +13,8 @@ Opgeruimd is een tweetalige huishoudgame voor mensen die moeilijk tijd vrijmaken
 ## Gebruikersroute
 
 - Toon Bas groot bij de begroeting. De naamstap heeft één gecentreerd veld met autofocus. De app wijst een profielkleur toe die de speler later in Instellingen kan wijzigen.
-- Houd de onboarding kort. De speler kiest huishouden en woonlagen. Bas vult kamers en starterstaken in. Het huisje bestaat uit geïllustreerde bouwdelen. Keuken, woonkamer, hal en wc komen beneden, slaapkamer en badkamer op de eerste verdieping als die er is. Het washok komt op de bovenste verdieping bij meerdere lagen. Vanaf drie lagen is de bovenste de zolder. Handmatige kamerkeuzes tellen mee als het aantal lagen verandert. Tuin en balkon zijn afzonderlijke keuzes.
-- Nederlands en Engels moeten dezelfde route bieden. Van taal wisselen behoudt de huidige stap en ingevulde gegevens. Nieuwe spelers kunnen hun huis bewaren. Bestaande spelers kunnen tijdens onboarding naar inloggen en weer terug.
+- Houd de onboarding kort. Bas stelt zich direct voor op het welkomstscherm. De speler kiest huishouden, woonlagen, buitenruimte (tuin, balkon) en huisextra's (vaatwasser, robotstofzuiger, airfryer, koffiemachine, droger, bidet, kamerplanten, huisdieren). Bas vult kamers en gepersonaliseerde starterstaken in (zoals robotstofzuiger legen i.p.v. beneden stofzuigen). Het huisje bestaat uit geïllustreerde bouwdelen. Keuken, woonkamer, hal en wc komen beneden, slaapkamer en badkamer op de eerste verdieping als die er is. Het washok komt op de bovenste verdieping bij meerdere lagen. Vanaf drie lagen is de bovenste de zolder. Handmatige kamerkeuzes tellen mee als het aantal lagen verandert. De ritmestap (rondelengte, rustdagen en herinneringstijd) staat uitgeklapt zonder scrollen.
+- Nederlands en Engels moeten dezelfde route bieden. Van taal wisselen behoudt de huidige stap en ingevulde gegevens. Nieuwe spelers kunnen hun huis bewaren met duidelijke geruststelling dat het account alleen hun keuzes opslaat (geen spam of nieuwsbrieven). Bestaande spelers kunnen tijdens onboarding naar inloggen en weer terug.
 - Een tijdstip is de gewone herinneringskeuze in onboarding. De iOS-thuiskomstautomatisering is een aparte integratie. De eerder opgeslagen ronde van vandaag is offline beschikbaar. Afgevinkte taken worden na herstel van de verbinding gesynchroniseerd.
 
 ## Wegwijs in de code
@@ -31,7 +31,7 @@ Opgeruimd is een tweetalige huishoudgame voor mensen die moeilijk tijd vrijmaken
 
 ## Stand van de overdracht
 
-De app draait op https://opgeruimd.vercel.app. De productversie op 23 november 2026 correspondeert met commit `e696184`. Latere wijzigingen staan in de Git-geschiedenis. De productiebuild gebruikt `npm run build` (TypeScript en Vite). Zie README.md voor lokaal draaien en backendinrichting.
+De app draait op https://opgeruimd.vercel.app. Push wijzigingen altijd direct naar `origin/main` zodat Vercel meteen deployt om op iPhone te testen. De productversie op 23 november 2026 correspondeert met commit `e696184`. Latere wijzigingen staan in de Git-geschiedenis. De productiebuild gebruikt `npm run build` (TypeScript en Vite). Zie README.md voor lokaal draaien en backendinrichting.
 
 Voor deze versie zijn de indeling voor één tot vier woonlagen en het behoud van handmatige keuzes gecontroleerd. De onboarding en taalwissel zijn in mobiele WebKit doorlopen. Offline heropenen, afvinken en synchroniseren zijn in Chromium gecontroleerd. Het nieuwe icoon is op klein formaat in grijstinten bekeken. Het uiterlijk in het Clear-thema van iOS 27 op een fysieke iPhone staat nog open.
 

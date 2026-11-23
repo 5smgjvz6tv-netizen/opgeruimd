@@ -1,11 +1,28 @@
 import { useState } from 'react'
 import { Icon } from './Icon'
 import { Stepper } from './Controls'
-import { t } from '../lib/i18n'
+import { haptic } from '../lib/feel'
+import { t, type TKey } from '../lib/i18n'
 import { floorName, resizeLayout, toggleRoom, type HomeLayout } from '../lib/homeLayout'
 import { room } from '../lib/rooms'
 
 const choices = ['keuken','woonkamer','slaapkamer','badkamer','toilet','hal','werkkamer','kinderkamer','was','zolder']
+type ExtraKey = 'dishwasher' | 'robotVacuum' | 'airfryer' | 'coffeeMachine' | 'dryer' | 'bidet' | 'plants' | 'pets'
+const EXTRAS: [ExtraKey, TKey, string][] = [
+  ['dishwasher', 'layout.dishwasher', 'keuken'],
+  ['robotVacuum', 'layout.robotVacuum', 'vloeren'],
+  ['airfryer', 'layout.airfryer', 'pot'],
+  ['coffeeMachine', 'layout.coffeeMachine', 'sparkle'],
+  ['dryer', 'layout.dryer', 'was'],
+  ['bidet', 'layout.bidet', 'toilet'],
+  ['plants', 'layout.plants', 'leaf'],
+  ['pets', 'layout.pets', 'huisdier'],
+]
+const OUTDOOR: ['garden' | 'balcony', TKey, string][] = [
+  ['garden', 'room.tuin', 'buiten'],
+  ['balcony', 'room.balkon', 'huis'],
+]
+
 export function HomeLayoutPicker({ home, onChange }: { home: HomeLayout; onChange: (h: HomeLayout) => void }) {
   const [selected, select] = useState(0)
   const active = Math.min(selected, home.floors.length - 1)
@@ -14,9 +31,9 @@ export function HomeLayoutPicker({ home, onChange }: { home: HomeLayout; onChang
     onChange(resizeLayout(home, count))
   }
   const [landing, setLanding] = useState<number | null>(null)
-  function option(label: string, icon: string, checked: boolean, toggle: () => void) {
-    return <button key={label} type="button" className="room-option" aria-pressed={checked} onClick={toggle}>
-      <Icon name={icon} /><span>{label}</span><i aria-hidden="true">{checked && <Icon name="check" size={13} />}</i>
+  function option(key: string, label: string, icon: string, checked: boolean, toggle: () => void) {
+    return <button key={key} type="button" className="room-option" aria-pressed={checked} onClick={() => { haptic(4); toggle() }}>
+      <Icon name={icon} /><span>{label}</span><i aria-hidden="true">{checked && <Icon name="check" size={12} />}</i>
     </button>
   }
   return <div className="layout-picker">
@@ -28,19 +45,19 @@ export function HomeLayoutPicker({ home, onChange }: { home: HomeLayout; onChang
       <div className="house-model">
         <img className="toy-roof" src={art('roof')} alt="" />
         {home.floors.map((_, index) => <button type="button" key={index} aria-pressed={active === index}
-          className={landing === index ? 'landing' : ''} onClick={() => select(index)}>
+          className={landing === index ? 'landing' : ''} onClick={() => { haptic(3); select(index) }}>
           <img src={art(index ? 'storey' : 'ground')} alt="" /><span>{floorName(index)}</span>
         </button>).reverse()}
       </div>
     </div>
     <fieldset><legend>{t('layout.rooms', { floor: floorName(active) })}</legend><div className="room-options">
-      {choices.map(id => option(room(id).label, room(id).icon, home.floors[active].includes(id), () => onChange(toggleRoom(home, active, id))))}
+      {choices.map(id => option(id, room(id).label, room(id).icon, home.floors[active].includes(id), () => onChange(toggleRoom(home, active, id))))}
+    </div></fieldset>
+    <fieldset><legend>{t('layout.outdoor')}</legend><div className="room-options">
+      {OUTDOOR.map(([key, label, icon]) => option(key, t(label), icon, !!home[key], () => onChange({ ...home, [key]: !home[key] })))}
     </div></fieldset>
     <fieldset><legend>{t('layout.extra')}</legend><div className="room-options">
-      {(['dishwasher','garden','balcony'] as const).map(key => option(
-        t(key === 'dishwasher' ? 'layout.dishwasher' : key === 'garden' ? 'room.tuin' : 'room.balkon'),
-        { dishwasher: 'keuken', garden: 'buiten', balcony: 'huis' }[key], home[key], () => onChange({ ...home, [key]: !home[key] })
-      ))}
+      {EXTRAS.map(([key, label, icon]) => option(key, t(label), icon, !!home[key], () => onChange({ ...home, [key]: !home[key] })))}
     </div></fieldset>
   </div>
 }
