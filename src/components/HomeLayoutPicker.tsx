@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { Segmented } from './Bits'
 import { Icon } from './Icon'
 import { Stepper } from './Controls'
 import { haptic } from '../lib/feel'
 import { t, type TKey } from '../lib/i18n'
-import { floorName, resizeLayout, toggleRoom, type HomeLayout } from '../lib/homeLayout'
+import { floorName, resizeLayout, switchHomeType, toggleRoom, type HomeLayout, type HomeType } from '../lib/homeLayout'
 import { room } from '../lib/rooms'
 
 const choices = ['keuken','woonkamer','slaapkamer','badkamer','toilet','hal','werkkamer','kinderkamer','was','zolder']
@@ -36,7 +37,17 @@ export function HomeLayoutPicker({ home, onChange }: { home: HomeLayout; onChang
       <Icon name={icon} /><span>{label}</span><i aria-hidden="true">{checked && <Icon name="check" size={12} />}</i>
     </button>
   }
+  const homeType: HomeType = home.homeType ?? (home.floors.length > 1 || home.garden ? 'house' : 'apartment')
   return <div className="layout-picker">
+    <Segmented value={homeType} onChange={(v) => {
+      haptic(4)
+      const next = switchHomeType(home, v as HomeType)
+      select(0)
+      onChange(next)
+    }} options={[
+      { v: 'apartment', label: t('layout.typeApt') },
+      { v: 'house', label: t('layout.typeHouse') },
+    ]} />
     <div className="floor-builder">
       <div className="row"><strong className="grow">{t('layout.floors')}</strong><Stepper value={home.floors.length} min={1} max={4} onChange={count => {
         setLanding(count > home.floors.length ? count - 1 : null)

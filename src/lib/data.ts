@@ -28,7 +28,7 @@ export type Member = {
 }
 export type Household = { home_layout?: HomeLayout | null; id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[]; rooms: string[] | null; size: number }
 export type Data = { me: Member; partner: Member | null; others: Member[]; solo: boolean; members: Member[]; household: Household; tasks: Task[]; items: PlanItem[]; xp: Record<string, number> }
-export type TaskInput = Pick<Task, 'title' | 'room' | 'minutes' | 'recurrence' | 'weekdays' | 'interval_days' | 'assignee' | 'due_date' | 'effort'>
+export type TaskInput = Pick<Task, 'title' | 'room' | 'minutes' | 'recurrence' | 'weekdays' | 'interval_days' | 'assignee' | 'due_date' | 'effort' | 'time_of_day'>
 
 /** Laadt alles van het huishouden en blijft live in sync met de andere telefoon. */
 export function useHousehold(userId: string) {

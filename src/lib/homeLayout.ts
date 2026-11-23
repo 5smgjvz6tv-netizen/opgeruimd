@@ -2,8 +2,10 @@ import { CATALOG, type CatalogTask } from './catalog'
 import { t } from './i18n'
 
 export type CleanDepth = 'basic' | 'normal' | 'thorough'
+export type HomeType = 'house' | 'apartment'
 
 export type HomeLayout = {
+  homeType?: HomeType
   floors: string[][]
   placements?: Record<string, number[]>
   dishwasher: boolean
@@ -30,9 +32,20 @@ function suggestedFloors(count: number): string[][] {
   return floors
 }
 export const initialLayout = (): HomeLayout => ({
+  homeType: 'apartment',
   floors: suggestedFloors(1), placements: {}, dishwasher: false, garden: false, balcony: false,
   cat: false, dog: false, plants: false, workFromHome: false, youngKids: false, hasCleaner: false, cooksOften: false, depth: 'normal',
 })
+
+export function switchHomeType(home: HomeLayout, homeType: HomeType): HomeLayout {
+  const next = resizeLayout(home, homeType === 'apartment' ? 1 : Math.max(2, home.floors.length))
+  return {
+    ...next,
+    homeType,
+    garden: homeType === 'house' ? true : false,
+    balcony: homeType === 'apartment' ? true : home.balcony,
+  }
+}
 
 function roomFloors(floors: string[][], id: string) {
   return floors.flatMap((rooms, i) => rooms.includes(id) ? [i] : [])
@@ -87,11 +100,13 @@ export function starterTasks(home: HomeLayout): CatalogTask[] {
     : home.floors.length === 1
       ? ['v-zuig']
       : ['v-zuig-beneden', 'v-zuig-boven', ...['v-zuig-2', 'v-zuig-3'].slice(0, home.floors.length - 2)]
+  const isHouse = home.homeType === 'house' || (home.homeType === undefined && (home.floors.length > 1 || home.garden))
   const weekly = depth === 'basic' ? [] : [
     ...(rooms.includes('badkamer') && !home.hasCleaner ? ['b-schoonmaken'] : []),
     ...(rooms.includes('toilet') && !home.hasCleaner ? ['t-wc'] : []),
     ...(rooms.includes('slaapkamer') ? ['s-bed'] : []),
     ...(rooms.includes('was') ? ['l-donker'] : []),
+    ...(isHouse ? ['g-container'] : []),
   ]
   const monthly = depth !== 'thorough' ? [] : [
     ...(rooms.includes('keuken') ? ['k-koelkast'] : []),
@@ -148,6 +163,7 @@ export function recommendRound(home: HomeLayout, size: number, restDays: number[
   if (home.plants) raw += 1.5
   if (home.garden) raw += 3
   if (home.balcony) raw += 1.5
+  if (home.homeType === 'apartment') raw -= 3
   if (home.hasCleaner) raw *= 0.6
   const depth = home.depth ?? 'normal'
   if (depth === 'basic') raw *= 0.72

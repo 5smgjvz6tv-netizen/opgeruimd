@@ -39,8 +39,8 @@ export const CATALOG_EN: Record<string, { title: string; keywords: string }> = {
   'w-gordijnen': { title: 'Wash or shake out the curtains', keywords: 'curtains drapes sheers wash shake dust' },
   'w-tv': { title: 'Clean the TV screen and remote', keywords: 'television tv screen remote control fingerprints' },
 
-  's-bed': { title: 'Change the bed sheets', keywords: 'duvet comforter sheets bedding pillowcases linens covers' },
-  's-bed-opmaken': { title: 'Make the bed', keywords: 'air make bed duvet bedding sheets' },
+  's-bed': { title: 'Change the bed sheets (fresh linens)', keywords: 'duvet comforter sheets bedding pillowcases linens covers' },
+  's-bed-opmaken': { title: 'Make the bed (straighten duvet)', keywords: 'air make bed duvet bedding sheets' },
   's-dekbed': { title: 'Wash the duvet', keywords: 'duvet comforter quilt bedding laundry' },
   's-kussens': { title: 'Wash the pillows', keywords: 'pillows bedding laundry wash' },
   's-matras': { title: 'Turn and vacuum the mattress', keywords: 'mattress flip rotate turn vacuum' },

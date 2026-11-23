@@ -25,7 +25,7 @@ function vagueSuggestions(title: string): CatalogTask[] | null {
   return group.tasks.slice(0, 3)
 }
 
-const blank = (): TaskInput => ({ title: '', room: null, minutes: 10, recurrence: 'once', weekdays: [], interval_days: 7, assignee: null, due_date: null, effort: 2 })
+const blank = (): TaskInput => ({ title: '', room: null, minutes: 10, recurrence: 'once', weekdays: [], interval_days: 7, assignee: null, due_date: null, effort: 2, time_of_day: null })
 
 export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; onClose: () => void; task?: Task | null; onLogDone?: (t: Task) => void }) {
   const { d, act } = useApp()
@@ -43,7 +43,7 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
 
   useEffect(() => {
     if (!open) return
-    setF(task ? { ...task, interval_days: task.interval_days ?? 7 } : blank())
+    setF(task ? { ...task, interval_days: task.interval_days ?? 7, time_of_day: task.time_of_day ?? null } : blank())
     setTouched({ room: !!task, minutes: !!task })
     setMode(task ? 'own' : 'lib'); setSel(new Set())
   }, [open, task])
@@ -135,6 +135,15 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
                   <input type="date" className="field" style={{ width: 'auto' }} value={f.due_date ?? ''} onChange={(e) => set({ due_date: e.target.value || null })} /></label></div>
               )}
             </div></div>
+
+          <div><span className="label">{t('task.moment')}</span>
+            <Chips value={f.time_of_day ?? ''} onChange={(v) => set({ time_of_day: (v || null) as TaskInput['time_of_day'] })}
+              options={[
+                { v: '', label: t('moment.any') },
+                { v: 'morning', label: t('moment.morning'), icon: 'sun' },
+                { v: 'afternoon', label: t('moment.afternoon'), icon: 'clock' },
+                { v: 'evening', label: t('moment.evening'), icon: 'moon' },
+              ]} /></div>
 
           {d.members.length > 1 && <div><span className="label">{t('task.who')}</span>
             <Chips value={f.assignee ?? ''} onChange={(v) => set({ assignee: v || null })}

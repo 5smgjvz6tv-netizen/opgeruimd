@@ -2,6 +2,7 @@
 // Geen imports, zodat het in beide omgevingen werkt.
 
 export type Recurrence = 'once' | 'weekly' | 'interval'
+export type TimeOfDay = 'morning' | 'afternoon' | 'evening'
 export type Task = {
   id: string
   household_id: string
@@ -18,6 +19,7 @@ export type Task = {
   effort: number // 1 = licht, 2 = normaal, 3 = zwaar
   postponed_to: string | null
   catalog_id?: string | null
+  time_of_day?: TimeOfDay | null
   created_at: string
 }
 export type PlanItem = {

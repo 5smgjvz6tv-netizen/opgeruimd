@@ -2,12 +2,28 @@
 // Vorm per taak: [id, titel, minuten, zwaarte (1 licht, 2 normaal, 3 zwaar), hoe vaak, zoekwoorden, populair?]
 // "Hoe vaak": een getal = elke N dagen; een tekst als 'ma,do' = vaste weekdagen.
 
+import type { TimeOfDay } from '../../supabase/functions/_shared/planner'
+
 type Raw = [string, string, number, 1 | 2 | 3, number | string, string?, 1?, string?]
 export type CatalogTask = {
   id: string; title: string; room: string; minutes: number; effort: number; popular: boolean; keywords: string
-  recurrence: 'weekly' | 'interval'; weekdays: number[]; interval_days: number | null
+  recurrence: 'weekly' | 'interval'; weekdays: number[]; interval_days: number | null; time_of_day: TimeOfDay | null
 }
 export type CatalogRoom = { id: string; label: string; icon: string; tasks: CatalogTask[] }
+
+const TIME_HINTS: Record<string, TimeOfDay> = {
+  's-bed-opmaken': 'morning',
+  'k-vaatwasser-uit': 'morning',
+  'g-planten': 'morning',
+  'b-planten': 'morning',
+  'g-gras': 'afternoon',
+  'w-ramen': 'afternoon',
+  'a-ramen-buiten': 'afternoon',
+  'g-container': 'evening',
+  'w-opruimen': 'evening',
+  'c-speelgoed': 'evening',
+  'a-opruimronde': 'evening',
+}
 
 const DAY: Record<string, number> = { ma: 0, di: 1, wo: 2, do: 3, vr: 4, za: 5, zo: 6 }
 
@@ -49,8 +65,8 @@ const RAW: { id: string; label: string; icon: string; room: string; tasks: Raw[]
     ['w-tv', 'Tv-scherm en afstandsbediening schoonmaken', 5, 1, 30, 'scherm afstandsbediening'],
   ] },
   { id: 'slaapkamer', label: 'Slaapkamer', icon: 'slaapkamer', room: 'slaapkamer', tasks: [
-    ['s-bed', 'Bed verschonen', 15, 2, 'za', 'beddengoed dekbedovertrek laken kussensloop dekbed', 1],
-    ['s-bed-opmaken', 'Bed opmaken', 2, 1, 1, 'dekbed luchten raam', 1],
+    ['s-bed', 'Bed verschonen (nieuw beddengoed)', 15, 2, 'za', 'beddengoed dekbedovertrek laken kussensloop dekbed', 1],
+    ['s-bed-opmaken', 'Bed opmaken (dekbed rechttrekken)', 2, 1, 1, 'dekbed luchten raam opmaken', 1],
     ['s-dekbed', 'Dekbed wassen', 15, 2, 90, 'dekbed wassen stomerij'],
     ['s-kussens', 'Hoofdkussens wassen', 10, 1, 90, 'kussen'],
     ['s-matras', 'Matras keren en stofzuigen', 15, 3, 90, 'matras keren draaien'],
@@ -158,6 +174,7 @@ export const CATALOG: CatalogRoom[] = RAW.map((r) => ({
     recurrence: typeof freq === 'string' ? 'weekly' : 'interval',
     weekdays: typeof freq === 'string' ? freq.split(',').map((d) => DAY[d]) : [],
     interval_days: typeof freq === 'number' ? freq : null,
+    time_of_day: TIME_HINTS[id] ?? null,
   })),
 }))
 
@@ -173,7 +190,7 @@ export function searchCatalog(q: string, rooms?: string[]) {
 
 export const catalogRow = (t: CatalogTask, householdId: string) => ({
   household_id: householdId, catalog_id: t.id, title: catTitle(t), room: t.room, minutes: t.minutes, effort: t.effort,
-  recurrence: t.recurrence, weekdays: t.weekdays, interval_days: t.interval_days,
+  recurrence: t.recurrence, weekdays: t.weekdays, interval_days: t.interval_days, time_of_day: t.time_of_day,
 })
 
 // ——— Engels (catalog.en.ts, los bestand) ———

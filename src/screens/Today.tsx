@@ -75,7 +75,8 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
   const title = (id: string) => taskTitle(taskOf(id))
   const xpItem = (i: PlanItem) => xpOf(i.minutes, taskOf(i.task_id)?.effort)
   const todays = d.items.filter((i) => i.date === today)
-  const mine = todays.filter((i) => i.user_id === me.user_id)
+  const momentRank = (id: string) => ({ morning: 0, afternoon: 1, '': 2, evening: 3 }[taskOf(id)?.time_of_day ?? ''] ?? 2)
+  const mine = todays.filter((i) => i.user_id === me.user_id).sort((a, b) => momentRank(a.task_id) - momentRank(b.task_id))
   const requests = todays.filter((i) => i.swap_to === me.user_id && i.status === 'todo')
   const doneItems = mine.filter((i) => i.status === 'done')
   const doneMin = doneItems.reduce((s, i) => s + i.minutes, 0)
@@ -211,7 +212,10 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
             </div>
 
             {(() => {
-              const nextItem = mine.find(i => i.status !== 'done')
+              const h = new Date().getHours()
+              const curMoment = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
+              const open = mine.filter((i) => i.status !== 'done')
+              const nextItem = open.find((i) => taskOf(i.task_id)?.time_of_day === curMoment) ?? open[0]
               return <RoundCoach done={doneItems.length} total={mine.length} nextTask={title(nextItem?.task_id ?? '')} name={me.name} isBonus={!!nextItem?.extra} xp={earnedXp} />
             })()}
 
@@ -432,6 +436,7 @@ function TaskRow({ item, onToggle, onMore }: { item: PlanItem; onToggle: (el?: E
       <button className="task-main" onClick={(e) => onToggle(e.currentTarget.parentElement?.querySelector('.check'))}>
         <span className="task-title"><span className="strike">{name}</span></span>
         <span className="row-sub"><Icon name={r.icon} size={13} />{r.label}<span className="sep" />{item.minutes} {t('common.min')}
+          {task?.time_of_day && <><span className="sep" /><Icon name={task.time_of_day === 'morning' ? 'sun' : task.time_of_day === 'evening' ? 'moon' : 'clock'} size={12} />{t(`moment.${task.time_of_day}` as const)}</>}
           {task?.effort === 3 && <><span className="sep" /><Icon name="muscle" size={13} /></>}
           {item.extra && <><span className="sep" />{t('today.extra')}</>}</span>
       </button>
