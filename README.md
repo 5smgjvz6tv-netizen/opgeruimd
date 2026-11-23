@@ -1,6 +1,8 @@
 # Opgeruimd
 
-Een huishoud-app voor twee: elke dag een blokje van ±15 minuten, eerlijk verdeeld, met een herinnering als je thuiskomt.
+Een huishoudgame voor jezelf of je huisgenoten. Bas helpt je met een dagelijkse opruimronde van ongeveer 15 minuten.
+
+De productkeuzes, vormgeving, codekaart en open verificatiepunten staan in [de projectcontext](AGENTS.md).
 
 - **App**: React + Vite PWA (`src/`), gehost op Vercel: https://opgeruimd.vercel.app (`npx vercel deploy --prod`)
 - **Server**: Supabase (database, live sync, inloggen) + edge functions (`supabase/functions/`)
