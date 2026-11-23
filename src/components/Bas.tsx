@@ -38,8 +38,9 @@ const lowerFirst = (s: string) => (s.length > 1 && s[1] === s[1].toLowerCase() ?
 const MID_KEYS = ['bas.mid1', 'bas.mid2', 'bas.mid3'] as const
 const BONUS_KEYS = ['bas.bonus1', 'bas.bonus2', 'bas.bonus3'] as const
 const FINISH_KEYS = ['bas.finish1', 'bas.finish2', 'bas.finish3'] as const
+const FINISH_EXTRA_KEYS = ['bas.finishExtra1', 'bas.finishExtra2'] as const
 
-export function RoundCoach({ done, total, nextTask, name = '', isBonus = false, xp = 0 }: { done: number; total: number; nextTask?: string; name?: string; isBonus?: boolean; xp?: number }) {
+export function RoundCoach({ done, total, nextTask, name = '', isBonus = false, xp = 0, extraDone = 0 }: { done: number; total: number; nextTask?: string; name?: string; isBonus?: boolean; xp?: number; extraDone?: number }) {
   const previous = useRef(done)
   const [cheering, setCheering] = useState(false)
   useEffect(() => {
@@ -55,16 +56,20 @@ export function RoundCoach({ done, total, nextTask, name = '', isBonus = false, 
   const complete = done === total
   const task = lowerFirst(nextTask ?? '')
   const line = complete
-    ? (name ? t(FINISH_KEYS[(total + xp) % FINISH_KEYS.length], { name, xp }) : t('bas.finish'))
+    ? (extraDone > 0 && name
+        ? t(FINISH_EXTRA_KEYS[(total + extraDone) % FINISH_EXTRA_KEYS.length], { name, xp, extra: extraDone })
+        : name
+          ? t(FINISH_KEYS[(total + xp) % FINISH_KEYS.length], { name, xp })
+          : t('bas.finish'))
     : cheering
-      ? t('bas.cheer')
+      ? (extraDone > 0 && name ? t('bas.extraProps', { name }) : t('bas.cheer'))
       : isBonus
         ? t(BONUS_KEYS[(done + total) % BONUS_KEYS.length], { name, task })
         : done > 0
           ? t(MID_KEYS[done % MID_KEYS.length], { name, task })
           : t('bas.start', { task })
-  return <div className={'round-coach' + (complete ? ' celebrating' : '')}>
-    <Bas key={done} cheer={cheering || complete || isBonus} />
+  return <div className={'round-coach' + (complete || extraDone > 0 ? ' celebrating' : '')}>
+    <Bas key={done} cheer={cheering || complete || isBonus || extraDone > 0} />
     <span aria-live="polite"><b>Bas</b>{line}</span>
   </div>
 }

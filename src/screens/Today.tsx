@@ -79,6 +79,8 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
   const mine = todays.filter((i) => i.user_id === me.user_id).sort((a, b) => momentRank(a.task_id) - momentRank(b.task_id))
   const requests = todays.filter((i) => i.swap_to === me.user_id && i.status === 'todo')
   const doneItems = mine.filter((i) => i.status === 'done')
+  const extraDone = doneItems.filter((i) => i.extra).length
+  const [sharedDone, setSharedDone] = useState(false)
   const doneMin = doneItems.reduce((s, i) => s + i.minutes, 0)
   const totalMin = mine.reduce((s, i) => s + i.minutes, 0)
   const totalXp = mine.reduce((s, i) => s + xpItem(i), 0)
@@ -229,7 +231,7 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
               const curMoment = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
               const open = mine.filter((i) => i.status !== 'done')
               const nextItem = open.find((i) => taskOf(i.task_id)?.time_of_day === curMoment) ?? open[0]
-              return <RoundCoach done={doneItems.length} total={mine.length} nextTask={title(nextItem?.task_id ?? '')} name={me.name} isBonus={!!nextItem?.extra} xp={earnedXp} />
+              return <RoundCoach done={doneItems.length} total={mine.length} nextTask={title(nextItem?.task_id ?? '')} name={me.name} isBonus={!!nextItem?.extra} xp={earnedXp} extraDone={extraDone} />
             })()}
 
             {(running || paused) && (
@@ -300,6 +302,25 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
             <ul className="tasks">
               {mine.map((i) => <TaskRow key={i.id} item={i} onToggle={(el) => toggle(i, el)} onMore={() => setMenu(i)} />)}
             </ul>
+
+            {(allDone || extraDone > 0) && (
+              <div className="btn-row" style={{ marginTop: 12 }}>
+                <button className="btn tinted grow" onClick={async () => {
+                  haptic(4)
+                  const names = doneItems.map((i) => title(i.task_id)).join(', ')
+                  const minSpent = timedMinutes > 0 ? timedMinutes : doneMin
+                  const text = extraDone > 0
+                    ? t('today.shareTextExtra', { extra: extraDone, min: minSpent, xp: earnedXp, list: names })
+                    : t('today.shareText', { n: doneItems.length, min: minSpent, xp: earnedXp, list: names })
+                  if (navigator.share) {
+                    try { await navigator.share({ title: 'Opgeruimd', text }); return } catch { /* user cancelled */ }
+                  }
+                  try { await navigator.clipboard.writeText(text); setSharedDone(true); setTimeout(() => setSharedDone(false), 2500) } catch { /* */ }
+                }}>
+                  <Icon name="share" size={16} />{sharedDone ? t('common.copied') : t(d.solo ? 'today.shareDone' : 'today.shareMates')}
+                </button>
+              </div>
+            )}
 
           </>
         )}
