@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { addDays, localDate } from '../../supabase/functions/_shared/planner'
-import { Avatar, Ic, XpBar } from '../components/Bits'
+import { Avatar, Ic, Ring, XpBar } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { useApp, type Member } from '../lib/data'
 import { haptic, sound } from '../lib/feel'
@@ -54,8 +54,17 @@ export function Together() {
           {short.map((l, i) => {
             const day = addDays(ws, i)
             const st = dayState(d, day)
-            return <div key={l} className={'wd ' + st + (day === localDate() ? ' today' : '')}><span>{l}</span>
-              <i>{st === 'done' ? <Icon name="check" size={16} /> : st === 'rest' ? <Icon name="leaf" size={15} /> : st === 'partial' ? <Icon name="minus" size={14} /> : null}</i></div>
+            const items = d.items.filter((item) => item.date === day)
+            const done = items.filter((item) => item.status === 'done').length
+            const label = st === 'rest' ? t('today.rest') : `${done}/${items.length}`
+            return <div key={day} className={'wd ' + st + (day === localDate() ? ' today' : '')}
+              role="img" aria-label={`${list('days.long')[i]} · ${label}`}>
+              <span>{l}</span>
+              <Ring size={30} stroke={4} value={items.length && st !== 'rest' ? done / items.length : 0}>
+                {st === 'done' && <Icon name="check" size={15} />}
+                {st === 'rest' && <Icon name="leaf" size={14} />}
+              </Ring>
+            </div>
           })}
         </div>
         <p className="group-f">{t('prog.streakSub')}</p>

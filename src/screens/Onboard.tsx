@@ -62,10 +62,10 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
               <h1>Opgeruimd</h1>
               <p className="ob-sub" style={{ marginTop: 0 }}>{t('app.tagline')}</p>
             </div>
-            <div className="list">
+            <div className="list welcome-features">
               <div className="row"><Ic name="timer" /><span className="row-main"><span className="row-title">{t('ob.w1')}</span><span className="row-sub">{t('ob.w1s')}</span></span></div>
-              <div className="row"><Ic name="trophy" tone="gold" /><span className="row-main"><span className="row-title">{t('ob.w2')}</span><span className="row-sub">{t('ob.w2s')}</span></span></div>
-              <div className="row"><Ic name="duo" tone="coral" /><span className="row-main"><span className="row-title">{t('ob.w3')}</span><span className="row-sub">{t('ob.w3s')}</span></span></div>
+              <div className="row"><Ic name="trophy"  /><span className="row-main"><span className="row-title">{t('ob.w2')}</span><span className="row-sub">{t('ob.w2s')}</span></span></div>
+              <div className="row"><Ic name="duo"  /><span className="row-main"><span className="row-title">{t('ob.w3')}</span><span className="row-sub">{t('ob.w3s')}</span></span></div>
             </div>
             <div className="ob-foot welcome-actions">
               <button className="btn primary block" onClick={() => { set({ path: 'new' }); setDir(1); setStep('you') }}>{t('ob.start')}</button>

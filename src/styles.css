@@ -191,11 +191,9 @@ button.row:active { background: var(--fill); }
 .crown { color: var(--gold); }
 .week-dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 14px; }
 .wd { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
-.wd i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: var(--fill); color: var(--faint); }
-.wd.done i { background: var(--brand); color: #fff; }
-.wd.partial i { background: var(--brand-soft); color: var(--brand-ink); }
-.wd.rest i { background: var(--gold-soft); color: var(--gold); }
-.wd.today span { color: var(--text); }
+.wd > span { min-width: 24px; text-align: center; border-radius: 20px; }
+.wd.today > span { background: var(--brand-soft); color: var(--brand-ink); }
+.wd.rest .ring-label { color: var(--muted); }
 .badges { display: grid; grid-template-columns: repeat(3, 1fr); }
 .badge { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 14px 6px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .badge:nth-child(3n) { border-right: 0; }
@@ -352,3 +350,19 @@ button.row:active { background: var(--fill); }
 .round-head h2 { font-size: 21px; letter-spacing: -.025em; }
 .challenge .xpbar i { background: var(--brand); }
 .coach { background: var(--card); color: var(--text); }
+
+.welcome-features { display: grid; gap: 18px; background: transparent; box-shadow: none; overflow: visible; }
+.welcome-features .row { padding: 0 2px; gap: 16px; align-items: start; }
+.welcome-features .row + .row::before { content: none; }
+.welcome-features .ic { background: transparent; color: var(--brand-ink); height: 32px; width: 36px; }
+.welcome-features .glyph { width: 26px; height: 26px; }
+.welcome-features .row-title { font-weight: 650; }
+.welcome-features .row-sub { margin-top: 2px; font-size: 14px; }
+.welcome-actions { margin-top: auto; padding-top: 8px; }
+.welcome-actions .btn { border-radius: 100px; }
+.round .btn-row + .tasks { margin-top: 12px; }
+.tabbar button { min-height: 44px; justify-content: center; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #101113; --card: #202124; --fill: #292a2d; --fill-2: #35363a; --muted: #abacb1; --glass: rgba(34,35,38,.9); }
+  .tab-ind { background: #111214; }
+}

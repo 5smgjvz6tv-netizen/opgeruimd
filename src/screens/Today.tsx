@@ -98,7 +98,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
         ) : (
           <>
             <div className="round-head">
-              <Ring size={68} stroke={7} value={totalMin ? doneMin / totalMin : 0}>{allDone ? <Icon name="check" size={20} /> : `${doneItems.length}/${mine.length}`}</Ring>
+              <Ring size={68} stroke={7} value={doneItems.length / mine.length}>{allDone ? <Icon name="check" size={20} /> : `${doneItems.length}/${mine.length}`}</Ring>
               <div className="grow">
                 <h2>{allDone ? t('today.done') : running ? t('today.running') : t('today.round')}</h2>
                 <p className="row-sub">{allDone ? t('today.doneSub', { xp: earnedXp, min: doneMin })
@@ -122,10 +122,6 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
               </div>
             )}
 
-            <ul className="tasks">
-              {mine.map((i) => <TaskRow key={i.id} item={i} onToggle={(el) => toggle(i, el)} onMore={() => setMenu(i)} />)}
-            </ul>
-
             {(!allDone || running) && (
               <div className="btn-row">
                 {running ? (
@@ -142,6 +138,10 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
                 )}
               </div>
             )}
+            <ul className="tasks">
+              {mine.map((i) => <TaskRow key={i.id} item={i} onToggle={(el) => toggle(i, el)} onMore={() => setMenu(i)} />)}
+            </ul>
+
           </>
         )}
 

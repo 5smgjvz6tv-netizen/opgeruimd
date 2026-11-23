@@ -17,9 +17,10 @@ const b64 = (s: string) => {
 export async function pushState(): Promise<'on' | 'off' | 'denied' | 'unsupported'> {
   if (!pushSupported) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
+  if (Notification.permission !== 'granted') return 'off'
   const reg = await navigator.serviceWorker.getRegistration()
   const sub = await reg?.pushManager.getSubscription()
-  return sub && Notification.permission === 'granted' ? 'on' : 'off'
+  return sub ? 'on' : 'off'
 }
 
 /** Moet vanuit een tik worden aangeroepen (iOS-eis). */
