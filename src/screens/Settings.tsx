@@ -245,10 +245,25 @@ function Notifications() {
   )
 }
 
+const SHORTCUT_TERMS = {
+  nl: { app: 'Opdrachten', plus: '+', auto: 'Automatisering', arrive: 'Kom aan', action: 'Haal inhoud van URL op', play: '▶', allow: 'Sta toe' },
+  en: { app: 'Shortcuts', plus: '+', auto: 'Automation', arrive: 'Arrive', action: 'Get Contents of URL', play: '▶', allow: 'Allow' },
+} as const
+
+function renderStep(template: string, terms: Record<string, string>) {
+  const parts = template.split(/(\{[a-z]+\})/g)
+  return parts.map((p, i) => {
+    const key = p.startsWith('{') && p.endsWith('}') ? p.slice(1, -1) : null
+    return key && terms[key] ? <kbd key={i} className="ui-pill">{terms[key]}</kbd> : <span key={i}>{p}</span>
+  })
+}
+
 export function Arrive({ url }: { url: string }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [manual, setManual] = useState(false)
+  const [iosLang, setIosLang] = useState<'nl' | 'en'>(() => (navigator.language?.toLowerCase().startsWith('nl') ? 'nl' : 'en'))
+  const terms = SHORTCUT_TERMS[iosLang]
   return (
     <>
       <button className="row" onClick={() => setOpen((x) => !x)} aria-expanded={open}>
@@ -256,8 +271,15 @@ export function Arrive({ url }: { url: string }) {
         <span className="chev" style={{ transform: open ? 'rotate(90deg)' : '', transition: 'transform 260ms' }}><Icon name="chevron" size={16} /></span>
       </button>
       <div className={'collapse' + (open ? ' open' : '')}><div>
+        <div className="arrive-lang">
+          <span>{t('set.arrivePhoneLang')}</span>
+          <div style={{ width: 126 }}><Segmented value={iosLang} onChange={(v) => setIosLang(v as 'nl' | 'en')} options={[{ v: 'nl', label: 'NL' }, { v: 'en', label: 'EN' }]} /></div>
+        </div>
         <ol className="steps-list">
-          <li>{t('set.arriveS1')}</li><li>{t('set.arriveS2')}</li><li>{t('set.arriveS3')}</li><li>{t('set.arriveS4')}</li>
+          <li>{renderStep(t('set.arriveS1'), terms)}</li>
+          <li>{renderStep(t('set.arriveS2'), terms)}</li>
+          <li>{renderStep(t('set.arriveS3'), terms)}</li>
+          <li>{renderStep(t('set.arriveS4'), terms)}</li>
         </ol>
         <div style={{ padding: '0 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button className="btn primary block" onClick={async () => { try { await navigator.clipboard.writeText(url); setCopied(true); location.href = 'shortcuts://' } catch { setManual(true) } }}>
