@@ -1,0 +1,7 @@
+project_id = "opgeruimd"
+
+[functions.arrive]
+verify_jwt = false
+
+[functions.tick]
+verify_jwt = false
