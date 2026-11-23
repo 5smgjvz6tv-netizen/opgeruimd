@@ -62,7 +62,7 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
         {step === 'welcome' && (
           <>
             <div className="welcome-intro">
-              <img src={BASE + 'mandmaatje.webp'} alt="" className="welcome-mark" />
+              <img src={BASE + 'bas-rubber.webp'} alt="" className="welcome-mark" />
               <h1>Opgeruimd</h1>
               <p className="ob-sub" style={{ marginTop: 0 }}>{t('app.tagline')}</p>
             </div>
@@ -200,7 +200,7 @@ function Demo({ dr, onDone }: { dr: Draft; onDone: () => void }) {
   return (
     <>
       <div><h1 className="ob-title">{t('ob.demoTitle')}</h1><p className="ob-sub">{t('ob.demoSub')}</p></div>
-      <div className="coach" key={stage}><img className="ref-avatar" src={BASE + 'mandmaatje.webp'} alt="" /><span><strong>Bas</strong>{coach}</span></div>
+      <div className="coach" key={stage}><img className="ref-avatar" src={BASE + 'bas-rubber.webp'} alt="" /><span><strong>Bas</strong>{coach}</span></div>
       <section className={'card round' + (all ? ' all-done' : '')}>
         {all && <Confetti />}
         <div className="round-head">
@@ -257,7 +257,7 @@ function Account({ dr, email, setEmail, onLogin }: EmailField & { dr: Draft; onL
   const when = dr.time === null ? t('set.modeArrive').toLowerCase() : fmtTime(dr.time)
   return (
     <form style={{ display: 'contents' }} onSubmit={submit}>
-      <div className="save-house"><img src={BASE + 'mandmaatje.webp'} alt="" /><h1 className="ob-title">{t('ob.accountTitle')}</h1><p className="ob-sub">{t('ob.accountSub')}</p></div>
+      <div className="save-house"><img src={BASE + 'bas-rubber.webp'} alt="" /><h1 className="ob-title">{t('ob.accountTitle')}</h1><p className="ob-sub">{t('ob.accountSub')}</p></div>
       <div className="list">
         <div className="row"><Avatar m={{ name: dr.name, color: dr.color }} size={34} /><span className="row-main"><span className="row-title">{dr.name}</span>
           <span className="row-sub">{dr.path === 'join' ? dr.code : t('ob.summary', { tasks: dr.sel.length, min: dr.block, when })}</span></span></div>
@@ -287,7 +287,7 @@ function Login({ email, setEmail }: EmailField) {
   }
   return (
     <form style={{ display: 'contents' }} onSubmit={submit}>
-      <div className="ob-hero"><img src={BASE + 'mandmaatje.webp'} alt="" className="app-icon" /><h1 className="ob-title">{t('ob.loginTitle')}</h1></div>
+      <div className="ob-hero"><img src={BASE + 'bas-rubber.webp'} alt="" className="app-icon" /><h1 className="ob-title">{t('ob.loginTitle')}</h1></div>
       <div className="group">
         <input className="field" aria-label={t('ob.email')} type="email" autoComplete="email" placeholder={t('ob.email')} value={email} onChange={(e) => setEmail(e.target.value)} required />
         <input className="field" aria-label={t('ob.password')} type="password" autoComplete="current-password" placeholder={t('ob.password')} value={pw} onChange={(e) => setPw(e.target.value)} required />
