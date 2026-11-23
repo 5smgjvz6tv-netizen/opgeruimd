@@ -1,4 +1,5 @@
-import { dueSince, localDate, weekday } from '../../supabase/functions/_shared/planner'
+import { daysBetween, dueSince, localDate, nextDue, weekday } from '../../supabase/functions/_shared/planner'
+import { niceDate } from '../components/LogSheet'
 import { Avatar, DAYS_LONG } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { useApp, type Task } from '../lib/data'
@@ -70,14 +71,17 @@ function TaskLine({ t, onClick }: { t: Task; onClick: () => void }) {
   const r = room(t.room)
   const moved = t.postponed_to && t.postponed_to > localDate()
     ? `verzet naar ${new Date(t.postponed_to).toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' })}` : null
-  const meta = moved ?? (t.recurrence === 'interval' ? `elke ${t.interval_days} dagen` : t.recurrence === 'once' && t.due_date ? `vanaf ${new Date(t.due_date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}` : null)
+  const nd = !moved && !due ? nextDue(t) : null
+  const ago = t.last_done_at ? daysBetween(localDate(t.last_done_at), localDate()) : null
+  const when = nd ? `volgende ${niceDate(nd)}` : null
+  const meta = moved ?? when ?? (t.recurrence === 'interval' ? `elke ${t.interval_days} dagen` : t.recurrence === 'once' && t.due_date ? `vanaf ${new Date(t.due_date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}` : null)
   return (
     <li>
       <button className="line" onClick={onClick}>
         <span className="line-icon">{r.icon}</span>
         <span className="grow">
           <span className="task-title">{t.title}</span>
-          <span className="muted small">{r.label} · {t.minutes} min{t.effort === 3 ? ' · 💪' : t.effort === 1 ? ' · 🪶' : ''}{meta ? ` · ${meta}` : ''}{due && due < localDate() ? ' · ⚠︎ ligt achter' : ''}</span>
+          <span className="muted small">{ago !== null ? (ago === 0 ? '✓ vandaag gedaan · ' : ago === 1 ? '✓ gisteren · ' : `✓ ${ago}d geleden · `) : ''}{r.label} · {t.minutes} min{t.effort === 3 ? ' · 💪' : t.effort === 1 ? ' · 🪶' : ''}{meta ? ` · ${meta}` : ''}{due && due < localDate() ? ' · ⚠︎ ligt achter' : ''}</span>
         </span>
         {who && <Avatar m={who} size={22} />}
         <Icon name="chevron" size={16} />

@@ -3,6 +3,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { SUPABASE_KEY, SUPABASE_URL } from '../config'
 import { addDays, ensurePlan, fillPlan, localDate, type PlanItem, type Task } from '../../supabase/functions/_shared/planner'
 import { flush } from './push'
+import { guess } from './rooms'
+import { catalogRow, type CatalogTask } from './catalog'
 
 export type { PlanItem, Task }
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
@@ -19,8 +21,9 @@ export type Member = {
   snooze_on_arrive: boolean
   timer_ends_at: string | null
   notify: Record<string, boolean>
+  onboarded_at: string | null
 }
-export type Household = { id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[] }
+export type Household = { id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[]; rooms: string[] | null }
 export type Data = { me: Member; partner: Member | null; members: Member[]; household: Household; tasks: Task[]; items: PlanItem[] }
 export type TaskInput = Pick<Task, 'title' | 'room' | 'minutes' | 'recurrence' | 'weekdays' | 'interval_days' | 'assignee' | 'due_date' | 'effort'>
 
@@ -145,11 +148,39 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       setData((x) => ({ ...x, items: x.items.map((i) => (i.id === item.id ? { ...i, helper } : i)) }))
       await sb.from('plan_items').update({ helper }).eq('id', item.id)
     },
+    /** Taken uit de bibliotheek toevoegen en (waar er ruimte is) meteen inplannen. */
+    async addCatalog(list: CatalogTask[]) {
+      if (!list.length) return
+      const { data } = await sb.from('tasks').insert(list.map((t) => catalogRow(t, hh.id))).select('id')
+      if (data?.length) await fillPlan(sb, hh.id, today, data.map((r: { id: string }) => r.id))
+      reload()
+    },
+    /** Nieuwe taak die je al gedaan hebt (uit "Al gedaan"). */
+    async createForLog(title: string, repeat: boolean): Promise<Task | null> {
+      const g = guess(title)
+      const { data } = await sb.from('tasks').insert({
+        household_id: hh.id, title, room: g.room ?? 'overig', minutes: g.minutes ?? 10,
+        recurrence: repeat ? 'interval' : 'once', interval_days: repeat ? 7 : null,
+      }).select().single()
+      return data
+    },
+    /** "Al gedaan": telt mee, vinkt af als hij die dag gepland stond, en schuift de volgende keer op. */
+    async logDone(task: Task, at: Date, together: boolean, minutes?: number) {
+      await sb.rpc('log_done', { task: task.id, at: at.toISOString(), together, minutes: minutes ?? null })
+      reload()
+    },
+    /** 👏 High five voor een klus van je huisgenoot. */
+    async kudos(item: PlanItem, title: string) {
+      if (item.kudos_at || !item.done_by || item.done_by === me.user_id) return
+      setData((x) => ({ ...x, items: x.items.map((i) => (i.id === item.id ? { ...i, kudos_at: new Date().toISOString() } : i)) }))
+      await sb.from('plan_items').update({ kudos_at: new Date().toISOString() }).eq('id', item.id)
+      notify(item.done_by, `👏 ${me.name} geeft je een high five!`, `Voor: ${title}. Lekker bezig!`, 'kudos')
+    },
     async startTimer(minutes: number) {
       const end = new Date(Date.now() + minutes * 60_000)
       await patchMe({ timer_ends_at: end.toISOString() })
       await clearOutbox('timer')
-      await notify(me.user_id, 'Tijd is om! ⏰', 'Je blokje zit erop. Goed bezig! Vink af wat je gedaan hebt.', 'timer', end)
+      await notify(me.user_id, 'Tijd is om! ⏰', 'Je opruimronde zit erop. Goed bezig! Vink af wat je gedaan hebt.', 'timer', end)
     },
     async stopTimer() {
       await patchMe({ timer_ends_at: null })
@@ -164,7 +195,7 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       const at = new Date(Date.now() + (when === 'arrive' ? 3 : when) * 3600_000)
       await patchMe({ snooze_reason: reason, snooze_on_arrive: when === 'arrive', snooze_until: when === 'arrive' ? null : at.toISOString() })
       // Ook bij "als ik thuiskom" na 3 uur een reserve-herinnering, voor als het thuiskom-signaal niet komt.
-      await notify(me.user_id, 'Heb je nu even 15 minuten? 🙂', '', 'snooze', at)
+      await notify(me.user_id, 'Tijd voor je opruimronde? 🙂', '', 'snooze', at)
     },
     async unsnooze() {
       await clearOutbox('snooze')
@@ -182,6 +213,7 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       reload()
     },
     patchMe,
+    reload,
     async patchHousehold(fields: Partial<Household>) {
       setData((x) => ({ ...x, household: { ...x.household, ...fields } }))
       await sb.from('households').update(fields).eq('id', hh.id)

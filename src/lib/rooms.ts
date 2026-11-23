@@ -32,13 +32,14 @@ export function guess(title: string) {
   return { room: r, minutes: m }
 }
 
-export const STARTERS = [
-  { title: 'Bed verschonen', room: 'slaapkamer', minutes: 15, recurrence: 'weekly', weekdays: [5] },
-  { title: 'Zwarte was draaien', room: 'was', minutes: 10, recurrence: 'weekly', weekdays: [0] },
-  { title: 'Stofzuigen beneden', room: 'beneden', minutes: 15, recurrence: 'weekly', weekdays: [0, 3] },
-  { title: 'Stofzuigen boven', room: 'boven', minutes: 15, recurrence: 'weekly', weekdays: [2] },
-  { title: 'Badkamer schoonmaken', room: 'badkamer', minutes: 15, recurrence: 'weekly', weekdays: [5] },
-  { title: 'Aanrecht en kookplaat afnemen', room: 'keuken', minutes: 5, recurrence: 'interval', interval_days: 2 },
-  { title: 'Vuilnis buiten zetten', room: 'keuken', minutes: 5, recurrence: 'weekly', weekdays: [1] },
-  { title: 'Planten water geven', room: 'woonkamer', minutes: 5, recurrence: 'interval', interval_days: 7 },
-] as const
+const DAY = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
+/** "ma & do" / "elke 2 dagen" / "eenmalig" */
+export function scheduleLabel(t: { recurrence: string; weekdays?: number[] | null; interval_days?: number | null }) {
+  if (t.recurrence === 'weekly') return (t.weekdays ?? []).map((d) => DAY[d]).join(' & ')
+  if (t.recurrence === 'interval') {
+    const n = t.interval_days ?? 7
+    const named: Record<number, string> = { 1: 'elke dag', 2: 'om de dag', 7: 'elke week', 14: 'om de week', 30: 'elke maand', 60: 'om de 2 maanden', 90: 'elk kwartaal', 120: 'om de 4 maanden' }
+    return named[n] ?? `elke ${n} dagen`
+  }
+  return 'eenmalig'
+}

@@ -6,11 +6,12 @@ import { sb, useApp } from '../lib/data'
 import { enablePush, isIOS, isStandalone, pushState } from '../lib/push'
 
 const NOTIFY: [string, string, string][] = [
-  ['reminder', 'Herinnering voor je blokje', 'Als je thuiskomt, op je reservetijd of na een snooze'],
-  ['timer', 'Timer is klaar', 'Als je 15 minuten om zijn'],
+  ['reminder', 'Herinnering voor je opruimronde', 'Als je thuiskomt, op je reservetijd of na een snooze'],
+  ['timer', 'Timer is klaar', 'Als de tijd van je opruimronde om is'],
   ['swap', 'Ruilverzoeken', 'Als iemand vraagt of je iets overneemt'],
-  ['done', 'Huisgenoot is klaar', 'Als de ander het blokje heeft afgerond'],
+  ['done', 'Huisgenoot is klaar', 'Als de ander de opruimronde heeft afgerond'],
   ['task', 'Nieuwe taak toegevoegd', 'Als de ander een taak toevoegt'],
+  ['kudos', 'High fives', 'Als je huisgenoot je een 👏 geeft voor een klus'],
 ]
 const COLORS = ['#0FA37F', '#FF8A5B', '#4F7CFF', '#B45CF0', '#F2B705', '#E5487A']
 
@@ -93,7 +94,7 @@ export function Settings() {
 
       <h3 className="group-title">Huishouden</h3>
       <section className="card">
-        <label className="label">Lengte van een blokje</label>
+        <label className="label">Lengte van een opruimronde</label>
         <Chips value={hh.block_minutes} onChange={(v) => act.patchHousehold({ block_minutes: v })}
           options={[10, 15, 20, 30].map((v) => ({ v, label: `${v} min` }))} />
         <label className="label">Rustdagen (dan plan ik niks in)</label>
@@ -113,8 +114,9 @@ export function Settings() {
         </div>
       </section>
 
+      <button className="btn soft block" onClick={() => act.patchMe({ onboarded_at: null })}><Icon name="sparkle" size={18} /> Rondleiding opnieuw bekijken</button>
       <button className="btn ghost danger block" onClick={() => sb.auth.signOut()}>Uitloggen</button>
-      <p className="muted small center">Opgeruimd · 15 minuten per dag, samen.</p>
+      <p className="muted small center">Opgeruimd · samen een kwartiertje per dag.</p>
     </div>
   )
 }

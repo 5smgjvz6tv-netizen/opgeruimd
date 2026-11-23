@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     if (m.snooze_on_arrive) continue
     await db.from('members').update({ reminded_on: today }).eq('user_id', m.user_id)
     await ensurePlan(db, m.household_id, today)
-    const msg = await reminder(m, today, `Tijd voor je 15 minuten, ${m.name} ✨`)
+    const msg = await reminder(m, today, `Tijd voor je opruimronde, ${m.name} ✨`)
     if (msg) { await push(m.user_id, msg); fallbacks++ }
   }
   return json({ ok: true, sent: (due ?? []).length, fallbacks })

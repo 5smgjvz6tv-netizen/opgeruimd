@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { localDate, suggestExtras, weekday } from '../../supabase/functions/_shared/planner'
-import { Avatar, Check, Ring } from '../components/Bits'
+import { Avatar, Check, Confetti, Ring } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { Sheet } from '../components/Sheet'
 import { SnoozeSheet } from '../components/SnoozeSheet'
@@ -31,7 +31,7 @@ function beep() {
   } catch { /* geen geluid mogelijk */ }
 }
 
-export function Today({ goSettings }: { goSettings: () => void }) {
+export function Today({ goSettings, onLog }: { goSettings: () => void; onLog: () => void }) {
   const { d, act } = useApp()
   const { me, partner, household: hh } = d
   const today = localDate()
@@ -43,6 +43,13 @@ export function Today({ goSettings }: { goSettings: () => void }) {
   const doneMin = mine.filter((i) => i.status === 'done').reduce((s, i) => s + i.minutes, 0)
   const totalMin = mine.reduce((s, i) => s + i.minutes, 0)
   const allDone = mine.length > 0 && mine.every((i) => i.status === 'done')
+  // Feestje zodra je de laatste taak afvinkt (niet bij het openen van de app).
+  const [party, setParty] = useState(0)
+  const wasDone = useRef(allDone)
+  useEffect(() => {
+    if (allDone && !wasDone.current) setParty(Date.now())
+    wasDone.current = allDone
+  }, [allDone])
   const rest = hh.rest_days.includes(weekday(today))
 
   const endsAt = me.timer_ends_at ? Date.parse(me.timer_ends_at) : 0
@@ -97,7 +104,8 @@ export function Today({ goSettings }: { goSettings: () => void }) {
         </div>
       ))}
 
-      <section className="card hero">
+      <section className={'card hero' + (allDone ? ' all-done' : '') + (snoozed && !running ? ' is-snoozed' : '') + (timeUp ? ' timer-up' : '')}>
+        {party > 0 && <Confetti key={party} />}
         {rest && !mine.length ? (
           <Empty icon="🌿" title="Rustdag" text="Vandaag geen taken. Lekker niks doen." />
         ) : !mine.length ? (
@@ -109,14 +117,14 @@ export function Today({ goSettings }: { goSettings: () => void }) {
                 {running ? <Icon name="clock" size={20} /> : `${mine.filter((i) => i.status === 'done').length}/${mine.length}`}
               </Ring>
               <div>
-                <h2>{allDone ? 'Klaar voor vandaag! 🎉' : running ? 'Bezig…' : 'Jouw blokje'}</h2>
+                <h2>{allDone ? 'Klaar voor vandaag! 🎉' : running ? 'Bezig…' : 'Jouw opruimronde'}</h2>
                 <p className="muted">{allDone ? `${doneMin} min gedaan. Morgen weer.` : `${mine.length} ${mine.length === 1 ? 'taakje' : 'taakjes'} · ±${totalMin} min`}</p>
               </div>
             </div>
 
             {running && (
-              <div className="timer" role="timer" aria-live="off">
-                <span className="timer-num">{mmss(left)}</span>
+              <div className={'timer' + (left <= 10 ? ' ending' : '')} role="timer" aria-live="off" aria-label={`Nog ${mmss(left)}`}>
+                <span className="timer-num">{mmss(left).split(':')[0]}<span className="colon">:</span>{mmss(left).split(':')[1]}</span>
                 <div className="timer-bar"><i style={{ width: `${(left / (hh.block_minutes * 60)) * 100}%` }} /></div>
               </div>
             )}
@@ -174,6 +182,12 @@ export function Today({ goSettings }: { goSettings: () => void }) {
         )}
       </section>
 
+      <button className="log-cta" onClick={onLog}>
+        <span className="log-cta-ic">🙌</span>
+        <span className="grow"><b>Zelf al iets opgeruimd?</b><br /><span className="muted small">Log het. Het telt mee en de planning schuift mee.</span></span>
+        <Icon name="plus" size={20} />
+      </button>
+
       {partner && (
         <section className="card partner">
           <div className="partner-head">
@@ -211,7 +225,7 @@ function TaskRow({ item, title, onToggle, onMore }: { item: PlanItem; title: str
     <li className={'task' + (done ? ' done' : '')}>
       <Check done={done} onClick={onToggle} label={title} />
       <button className="task-main" onClick={onToggle}>
-        <span className="task-title">{title}</span>
+        <span className="task-title"><span className="strike">{title}</span></span>
         <span className="muted small">{room(t?.room ?? null).icon} {room(t?.room ?? null).label} · {item.minutes} min{item.extra ? ' · extraatje' : ''}</span>
       </button>
       {item.swap_to && <span className="tag">gevraagd</span>}

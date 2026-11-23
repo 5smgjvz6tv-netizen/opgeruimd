@@ -2,20 +2,33 @@ import { useEffect, useState } from 'react'
 import { useApp, type Task, type TaskInput } from '../lib/data'
 import { guess, ROOMS } from '../lib/rooms'
 import { Chips, DAYS } from './Bits'
+import { CatalogPicker } from './CatalogPicker'
+import { CATALOG, type CatalogTask } from '../lib/catalog'
 import { Sheet } from './Sheet'
 
 const blank = (): TaskInput => ({ title: '', room: null, minutes: 10, recurrence: 'once', weekdays: [], interval_days: 7, assignee: null, due_date: null, effort: 2 })
 
-export function TaskSheet({ open, onClose, task }: { open: boolean; onClose: () => void; task?: Task | null }) {
+export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; onClose: () => void; task?: Task | null; onLogDone?: (t: Task) => void }) {
   const { d, act } = useApp()
   const [f, setF] = useState<TaskInput>(blank)
   const [touched, setTouched] = useState({ room: false, minutes: false })
   const [busy, setBusy] = useState(false)
+  const [mode, setMode] = useState<'list' | 'own'>('list')
+  const [sel, setSel] = useState<Set<string>>(new Set())
+  const existing = new Set(d.tasks.filter((t) => !t.archived && t.catalog_id).map((t) => t.catalog_id!))
+  const toggle = (t: CatalogTask) => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
+  async function addSelected() {
+    setBusy(true)
+    await act.addCatalog(CATALOG.flatMap((r) => r.tasks).filter((t) => sel.has(t.id) && !existing.has(t.id)))
+    setBusy(false)
+    onClose()
+  }
 
   useEffect(() => {
     if (!open) return
     setF(task ? { ...task, interval_days: task.interval_days ?? 7 } : blank())
     setTouched({ room: !!task, minutes: !!task })
+    setMode(task ? 'own' : 'list'); setSel(new Set())
   }, [open, task])
 
   const set = (p: Partial<TaskInput>) => setF((x) => ({ ...x, ...p }))
@@ -43,7 +56,22 @@ export function TaskSheet({ open, onClose, task }: { open: boolean; onClose: () 
 
   return (
     <Sheet open={open} onClose={onClose} title={task ? 'Taak aanpassen' : 'Nieuwe taak'}>
-      <form onSubmit={(e) => { e.preventDefault(); save() }}>
+      {!task && (
+        <div className="segmented mode-switch" data-active={mode === 'list' ? 0 : 1}>
+          <span className="seg-pill" />
+          <button type="button" className={mode === 'list' ? 'on' : ''} onClick={() => setMode('list')}>📚 Uit de lijst</button>
+          <button type="button" className={mode === 'own' ? 'on' : ''} onClick={() => setMode('own')}>✏️ Zelf maken</button>
+        </div>
+      )}
+      {mode === 'list' && !task ? (
+        <div className="fade-in">
+          <CatalogPicker rooms={d.household.rooms} selected={sel} onToggle={toggle} existing={existing} />
+          <button className="btn primary block sticky-cta" onClick={addSelected} disabled={!sel.size || busy}>
+            {busy ? <span className="spinner" /> : sel.size ? `${sel.size} ${sel.size === 1 ? 'taak' : 'taken'} toevoegen` : 'Kies één of meer taken'}
+          </button>
+        </div>
+      ) : (
+      <form className="fade-in" onSubmit={(e) => { e.preventDefault(); save() }}>
         <input className="field big" autoFocus={!task} placeholder="Wat moet er gebeuren?" value={f.title}
           onChange={(e) => onTitle(e.target.value)} enterKeyHint="done" aria-label="Taak" />
 
@@ -60,7 +88,8 @@ export function TaskSheet({ open, onClose, task }: { open: boolean; onClose: () 
           options={[{ v: 1, label: '🪶 Licht' }, { v: 2, label: 'Normaal' }, { v: 3, label: '💪 Zwaar' }]} />
 
         <label className="label">Wanneer?</label>
-        <div className="segmented">
+        <div className="segmented" style={{ ['--n' as string]: 3 }} data-active={['once', 'weekly', 'interval'].indexOf(f.recurrence)}>
+          <span className="seg-pill" />
           {([['once', 'Eén keer'], ['weekly', 'Vaste dagen'], ['interval', 'Elke x dagen']] as const).map(([v, l]) => (
             <button type="button" key={v} className={f.recurrence === v ? 'on' : ''} onClick={() => set({ recurrence: v })}>{l}</button>
           ))}
@@ -87,12 +116,16 @@ export function TaskSheet({ open, onClose, task }: { open: boolean; onClose: () 
         </>}
 
         <button className="btn primary block" disabled={!valid || busy}>{busy ? 'Opslaan…' : task ? 'Opslaan' : 'Toevoegen'}</button>
+        {task && onLogDone && (
+          <button type="button" className="btn soft block" onClick={() => onLogDone(task)}>🙌 Ik heb dit al gedaan</button>
+        )}
         {task && (
           <button type="button" className="btn ghost danger block" onClick={async () => { await act.archiveTask(task.id); onClose() }}>
             Taak verwijderen
           </button>
         )}
       </form>
+      )}
     </Sheet>
   )
 }

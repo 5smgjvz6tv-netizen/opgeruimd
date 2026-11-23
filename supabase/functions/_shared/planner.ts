@@ -17,6 +17,7 @@ export type Task = {
   archived: boolean
   effort: number // 1 = licht, 2 = normaal, 3 = zwaar
   postponed_to: string | null
+  catalog_id?: string | null
   created_at: string
 }
 export type PlanItem = {
@@ -32,6 +33,7 @@ export type PlanItem = {
   extra: boolean
   swap_to: string | null
   helper: string | null
+  kudos_at: string | null
 }
 
 export const TZ = 'Europe/Amsterdam'
@@ -70,8 +72,22 @@ export function dueSince(t: Task, date: string): string | null {
     const d = addDays(date, -i)
     if (!t.weekdays.includes(weekday(d))) continue
     if (d < created) return null
-    // 1 dag speling: gisteren al vooruit gedaan telt ook.
-    return last && last >= addDays(d, -1) ? null : d
+    // Speling: vooruit gedaan telt, tot halverwege sinds de vorige keer (minstens 1 dag).
+    // Bed verschonen op za, maar al op do gedaan? Dan is hij voor deze week klaar.
+    let gap = 7
+    for (let j = 1; j <= 7; j++) if (t.weekdays.includes(weekday(addDays(d, -j)))) { gap = j; break }
+    const grace = Math.max(1, Math.floor(gap / 2))
+    return last && last >= addDays(d, -grace) ? null : d
+  }
+  return null
+}
+
+/** Wanneer is deze taak (na de laatste keer) weer aan de beurt? null = niet meer (eenmalig, klaar). */
+export function nextDue(t: Task, from: string = localDate()): string | null {
+  if (t.archived) return null
+  for (let i = 0; i <= 62; i++) {
+    const d = addDays(from, i)
+    if (dueSince(t, d)) return d
   }
   return null
 }
@@ -82,7 +98,7 @@ function score(t: Task, since: string, date: string) {
 }
 
 /**
- * Verdeel wat vandaag aan de beurt is over de huisgenoten, in blokjes van ±block minuten.
+ * Verdeel wat vandaag aan de beurt is over de huisgenoten, in opruimrondes van ±block minuten.
  * Wat niet past, schuift vanzelf door naar een volgende dag (het blijft "aan de beurt").
  */
 export function planDay(opts: {
@@ -117,7 +133,7 @@ export function planDay(opts: {
     .filter((x): x is { t: Task; since: string } => !!x.since && !taken.has(x.t.id))
     .sort((a, b) => score(b.t, b.since, date) - score(a.t, a.since, date) || a.t.created_at.localeCompare(b.t.created_at))
 
-  // Grote klussen (langer dan een blokje) pas als ze al een paar dagen wachten, en alleen als iemand nog niks heeft.
+  // Grote klussen (langer dan een opruimronde) pas als ze al een paar dagen wachten, en alleen als iemand nog niks heeft.
   const big = (t: Task, since: string) => t.minutes > blockMinutes && daysBetween(since, date) < 3
   const ordered = [...due.filter((x) => !big(x.t, x.since)), ...due.filter((x) => big(x.t, x.since))]
   const out: { task_id: string; user_id: string; minutes: number }[] = []

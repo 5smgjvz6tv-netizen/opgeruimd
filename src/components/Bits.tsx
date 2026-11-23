@@ -48,3 +48,17 @@ export function Ring({ value, size = 56, stroke = 6, children }: { value: number
 
 export const DAYS = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
 export const DAYS_LONG = ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag', 'Zondag']
+
+const CONFETTI_COLORS = ['#0FA37F', '#2BD3A0', '#FF8A5B', '#F2B705', '#4F7CFF', '#E5487A']
+/** Klein feestje als een opruimronde af is. */
+export function Confetti() {
+  const bits = Array.from({ length: 26 }, (_, i) => {
+    const a = (i / 26) * Math.PI * 2 + Math.random() * 0.4
+    const dist = 90 + Math.random() * 90
+    return {
+      '--x': `${Math.cos(a) * dist}px`, '--y': `${Math.sin(a) * dist * 0.8 + 60}px`, '--r': `${Math.random() * 720 - 360}deg`,
+      '--c': CONFETTI_COLORS[i % CONFETTI_COLORS.length], animationDelay: `${Math.random() * 80}ms`,
+    } as React.CSSProperties
+  })
+  return <div className="confetti" aria-hidden="true">{bits.map((st, i) => <i key={i} style={st} />)}</div>
+}
