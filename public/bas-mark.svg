@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>Opgeruimd · Bas</title>
+  <rect width="128" height="128" fill="#17191c"/>
+  <path fill="#f4f5f2" d="M22 71q3-13 11-22l-1-19q0-4 4-2l17 9q9-3 20-1l16-9q4-2 4 3l-1 20q9 9 12 22-12 18-42 27-28-9-40-28Z"/>
+  <path fill="#17191c" d="M29 67q16-17 32-2 18-17 35-1-7 17-25 14l-10-7-9 8q-14 1-23-12Z"/>
+  <g fill="#f4f5f2"><circle cx="46" cy="66" r="3.2"/><circle cx="79" cy="65" r="3.2"/></g>
+  <path fill="#17191c" d="M55 82q6-4 13-1-2 7-7 8Z"/>
+  <path fill="#b6f451" d="M103 17q2 9 10 11-8 2-10 11-2-9-10-11 8-2 10-11Z"/>
+</svg>

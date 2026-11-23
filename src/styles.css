@@ -1,22 +1,22 @@
 /* Opgeruimd — ontwerpsysteem. Rustig en helder (iOS-stijl), met spel-accenten (XP, ringen, reeksen). */
 :root {
-  --bg: #f7f2e7;
-  --card: #fffdf7;
-  --fill: #f2eee2;
-  --fill-2: #e8e5d7;
-  --text: #202b20;
-  --muted: #606758;
+  --bg: #f4f4f6;
+  --card: #ffffff;
+  --fill: #f3f3f5;
+  --fill-2: #e6e6ea;
+  --text: #18191c;
+  --muted: #61636a;
   --faint: #9aa49f;
   --line: rgba(18, 26, 23, 0.09);
-  --brand: #316345;
-  --brand-ink: #375e37;
-  --brand-soft: #e3ecd9;
+  --brand: #28613e;
+  --brand-ink: #215d39;
+  --brand-soft: #e5f1e5;
   --accent: #c65e2a;
   --gold: #a4681f;
   --gold-soft: #ffebc3;
   --bad: #e5484d;
   --glass: rgba(255, 255, 255, 0.78);
-  --shadow: 0 1px 2px rgba(16, 32, 26, 0.05), 0 4px 14px rgba(16, 32, 26, 0.05);
+  --shadow: none;
   --r: 16px;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -24,10 +24,10 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #151c17; --card: #202922; --fill: #1d2521; --fill-2: #28322d; --text: #eef3f0; --muted: #94a19b; --faint: #6c7873;
-    --line: rgba(255, 255, 255, 0.08); --brand: #9fd2a2; --brand-ink: #b2dfad; --brand-soft: rgba(47, 209, 161, 0.14);
+    --bg: #101113; --card: #1c1d20; --fill: #1d2521; --fill-2: #28322d; --text: #eef3f0; --muted: #94a19b; --faint: #6c7873;
+    --line: rgba(255, 255, 255, 0.08); --brand: #b6f451; --brand-ink: #b8ec6c; --brand-soft: rgba(47, 209, 161, 0.14);
     --gold: #f3b54f; --gold-soft: rgba(243, 181, 79, 0.15); --glass: rgba(22, 28, 25, 0.78);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4); color-scheme: dark;
+    --shadow: none; color-scheme: dark;
   }
 }
 
@@ -301,7 +301,7 @@ button.row:active { background: var(--fill); }
 .ob-art { width: min(180px, 46vw); aspect-ratio: 1; object-fit: contain; align-self: center; }
 .ob-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; padding-top: 12px; }
 .ob-hero h1 { font-size: 32px; font-weight: 750; letter-spacing: -0.02em; }
-.app-icon { width: 72px; height: 72px; border-radius: 18px; box-shadow: 0 10px 24px rgba(18, 162, 126, 0.28); }
+.app-icon { width: 72px; height: 72px; border-radius: 18px; box-shadow: none; }
 .choice { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px; border-radius: var(--r); background: var(--card); box-shadow: var(--shadow); border: 2px solid transparent; text-align: left; transition: border-color 200ms, background-color 200ms; }
 .choice.on { border-color: var(--brand); }
 .choice .radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--fill-2); flex: none; display: grid; place-items: center; }
@@ -340,18 +340,15 @@ button.row:active { background: var(--fill); }
 .check .glyph [fill='currentColor'], .tick .glyph [fill='currentColor'] { display: none; }
 .row > .segmented { flex: 1; }
 
-/* Bas' scorekaart: warm papier, veldgroen en een oranje wedstrijdrand. */
-.welcome-poster {
-  display: grid; grid-template-columns: minmax(84px, 32%) 1fr;
-  column-gap: clamp(12px, 4vw, 24px); row-gap: 7px; align-items: center;
-  padding: clamp(14px, 4vw, 22px); text-align: left; background: #254c37;
-  color: #fff6df; border-radius: 22px; border-bottom: 5px solid #df9651;
-}
-.welcome-poster .app-icon { grid-row: span 2; width: 100%; height: auto; border-radius: 16px; box-shadow: none; }
-.welcome-poster h1 { align-self: end; font-size: clamp(26px, 7vw, 36px); letter-spacing: -.045em; }
-.welcome-poster .ob-sub { align-self: start; color: #f4ebd4; font-size: 14px; line-height: 1.42; }
-.card.round, .level-card { border: 1px solid var(--line); border-top: 4px solid var(--brand); }
-.challenge { background: linear-gradient(110deg, var(--gold-soft), var(--card) 80%); border: 1px solid var(--line); }
-.xp-chip { border: 1px solid color-mix(in srgb, var(--gold) 38%, transparent); }
-.coach { border-left: 4px solid var(--gold); }
-.btn.primary:not(:disabled) { box-shadow: inset 0 -3px 0 rgba(0,0,0,.14); }
+
+.welcome-intro { display: grid; grid-template-columns: 42px 1fr; align-items: center; gap: 12px; padding: 12px 2px 2px; }
+.welcome-mark { width: 42px; height: 42px; border-radius: 10px; }
+.welcome-intro h1 { font-size: 36px; line-height: 1.08; letter-spacing: -.045em; }
+.welcome-intro .ob-sub { grid-column: 1 / -1; max-width: 39ch; font-size: 17px; }
+.round-head .ring { color: #b6f451; background: #17191c; border-radius: 50%; }
+.round-head .ring-bg { stroke: #364331; }
+.round-head .ring-fg { stroke: currentColor; }
+.round-head .ring-label { color: white; font-size: 16px; font-variant-numeric: tabular-nums; }
+.round-head h2 { font-size: 21px; letter-spacing: -.025em; }
+.challenge .xpbar i { background: var(--brand); }
+.coach { background: var(--card); color: var(--text); }

@@ -89,43 +89,6 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
         </div>
       </header>
 
-      <button className="card me-strip" onClick={goProgress} aria-label={t('level', { n: lv.n })}>
-        <span className="lv-badge">{lv.n}</span>
-        <span className="row-main">
-          <span className="row-title">{t('level', { n: lv.n })} · {lv.title}</span>
-          <XpBar frac={lv.frac} />
-          <span className="row-sub">{t('level.toNext', { xp: lv.next - myXp, n: lv.n + 1 })}</span>
-        </span>
-        {s > 0 && <span className="streak"><Icon name="flame" size={18} />{s}</span>}
-      </button>
-
-      {(!isStandalone || push === 'off') && (
-        <div className="list"><button className="row" onClick={goSettings}>
-          <Ic name={isStandalone ? 'bell' : 'download'} tone="coral" />
-          <span className="row-main"><span className="row-title">{t(isStandalone ? 'today.push' : 'today.install')}</span>
-            <span className="row-sub">{t(isStandalone ? 'today.pushSub' : 'today.installSub')}</span></span>
-          <span className="chev"><Icon name="chevron" size={16} /></span>
-        </button></div>
-      )}
-
-      {requests.map((i) => {
-        const from = d.members.find((m) => m.user_id === i.user_id)
-        return (
-          <div key={i.id} className="card pad">
-            <div className="row" style={{ padding: 0, minHeight: 0 }}>
-              <Ic name="swap" tone="coral" />
-              <span className="row-main"><span className="row-title">{title(i.task_id)}</span>
-                <span className="row-sub">{t('today.asksYou', { name: from?.name ?? '' })}</span></span>
-              <span className="xp-chip">+{xpItem(i)}</span>
-            </div>
-            <div className="btn-row" style={{ marginTop: 12 }}>
-              <button className="btn primary grow" onClick={() => act.answerSwap(i, title(i.task_id), true)}>{t('today.swapYes')}</button>
-              <button className="btn soft grow" onClick={() => act.answerSwap(i, title(i.task_id), false)}>{t('today.swapNo')}</button>
-            </div>
-          </div>
-        )
-      })}
-
       <section className={'card round' + (allDone ? ' all-done' : '')}>
         {party > 0 && <Confetti key={party} />}
         {rest && !mine.length ? (
@@ -135,7 +98,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
         ) : (
           <>
             <div className="round-head">
-              <Ring value={totalMin ? doneMin / totalMin : 0}>{allDone ? <Icon name="check" size={20} /> : `${doneItems.length}/${mine.length}`}</Ring>
+              <Ring size={68} stroke={7} value={totalMin ? doneMin / totalMin : 0}>{allDone ? <Icon name="check" size={20} /> : `${doneItems.length}/${mine.length}`}</Ring>
               <div className="grow">
                 <h2>{allDone ? t('today.done') : running ? t('today.running') : t('today.round')}</h2>
                 <p className="row-sub">{allDone ? t('today.doneSub', { xp: earnedXp, min: doneMin })
@@ -197,8 +160,45 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
           </div>
         )}
 
-        <div className="round-foot"><img className="ref-avatar" src={import.meta.env.BASE_URL + 'bas-coach.webp'} alt="" /><span>{reminderNote}</span><button onClick={goSettings}>{t('common.edit')}</button></div>
+        <div className="round-foot"><img className="ref-avatar" src={import.meta.env.BASE_URL + 'bas-mark.svg'} alt="" /><span>{reminderNote}</span><button onClick={goSettings}>{t('common.edit')}</button></div>
       </section>
+
+      <button className="card me-strip" onClick={goProgress} aria-label={t('level', { n: lv.n })}>
+        <span className="lv-badge">{lv.n}</span>
+        <span className="row-main">
+          <span className="row-title">{t('level', { n: lv.n })} · {lv.title}</span>
+          <XpBar frac={lv.frac} />
+          <span className="row-sub">{t('level.toNext', { xp: lv.next - myXp, n: lv.n + 1 })}</span>
+        </span>
+        {s > 0 && <span className="streak"><Icon name="flame" size={18} />{s}</span>}
+      </button>
+
+      {(!isStandalone || push === 'off') && (
+        <div className="list"><button className="row" onClick={goSettings}>
+          <Ic name={isStandalone ? 'bell' : 'download'} tone="coral" />
+          <span className="row-main"><span className="row-title">{t(isStandalone ? 'today.push' : 'today.install')}</span>
+            <span className="row-sub">{t(isStandalone ? 'today.pushSub' : 'today.installSub')}</span></span>
+          <span className="chev"><Icon name="chevron" size={16} /></span>
+        </button></div>
+      )}
+
+      {requests.map((i) => {
+        const from = d.members.find((m) => m.user_id === i.user_id)
+        return (
+          <div key={i.id} className="card pad">
+            <div className="row" style={{ padding: 0, minHeight: 0 }}>
+              <Ic name="swap" tone="coral" />
+              <span className="row-main"><span className="row-title">{title(i.task_id)}</span>
+                <span className="row-sub">{t('today.asksYou', { name: from?.name ?? '' })}</span></span>
+              <span className="xp-chip">+{xpItem(i)}</span>
+            </div>
+            <div className="btn-row" style={{ marginTop: 12 }}>
+              <button className="btn primary grow" onClick={() => act.answerSwap(i, title(i.task_id), true)}>{t('today.swapYes')}</button>
+              <button className="btn soft grow" onClick={() => act.answerSwap(i, title(i.task_id), false)}>{t('today.swapNo')}</button>
+            </div>
+          </div>
+        )
+      })}
 
       <button className="card challenge" onClick={goProgress}>
         <Ic name={ch.icon} tone={ch.done ? 'gold' : undefined} lg />
