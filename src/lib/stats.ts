@@ -1,4 +1,4 @@
-import { addDays, daysBetween, dueSince, localDate, weekday } from '../../supabase/functions/_shared/planner'
+import { addDays, daysBetween, dueSince, localDate, points, weekday } from '../../supabase/functions/_shared/planner'
 import type { Data } from './data'
 import { ROOMS } from './rooms'
 
@@ -30,15 +30,31 @@ export function streak(d: Data) {
 
 export const weekStart = (date = localDate()) => addDays(date, -weekday(date))
 
-export function weekMinutes(d: Data) {
+/** Inzet deze week per persoon: minuten en punten (minuten × zwaarte). Samen gedaan telt voor allebei. */
+export function weekEffort(d: Data) {
   const from = weekStart()
-  const out: Record<string, number> = {}
+  const out: Record<string, { min: number; pts: number }> = {}
   for (const i of d.items) {
-    if (i.status === 'done' && i.done_by && i.done_at && localDate(i.done_at) >= from) {
-      out[i.done_by] = (out[i.done_by] ?? 0) + i.minutes
+    if (i.status !== 'done' || !i.done_at || localDate(i.done_at) < from) continue
+    const effort = d.tasks.find((t) => t.id === i.task_id)?.effort
+    for (const id of [i.done_by, i.helper]) {
+      if (!id) continue
+      const o = (out[id] ??= { min: 0, pts: 0 })
+      o.min += i.minutes
+      o.pts += points(i.minutes, effort)
     }
   }
   return out
+}
+
+/** Taken die al minstens een dag liggen te wachten. */
+export function overdue(d: Data) {
+  const today = localDate()
+  return d.tasks
+    .map((t) => ({ t, since: dueSince(t, today) }))
+    .filter((x): x is { t: Data['tasks'][number]; since: string } => !!x.since && x.since < today)
+    .map((x) => ({ ...x, days: daysBetween(x.since, today) }))
+    .sort((a, b) => b.days - a.days)
 }
 
 /** Hoe staat het huis ervoor? 100% = alles bij. Per taak zakt het per dag dat hij te laat is. */

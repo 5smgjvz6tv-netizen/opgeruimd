@@ -18,10 +18,11 @@ export type Member = {
   snooze_reason: string | null
   snooze_on_arrive: boolean
   timer_ends_at: string | null
+  notify: Record<string, boolean>
 }
 export type Household = { id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[] }
 export type Data = { me: Member; partner: Member | null; members: Member[]; household: Household; tasks: Task[]; items: PlanItem[] }
-export type TaskInput = Pick<Task, 'title' | 'room' | 'minutes' | 'recurrence' | 'weekdays' | 'interval_days' | 'assignee' | 'due_date'>
+export type TaskInput = Pick<Task, 'title' | 'room' | 'minutes' | 'recurrence' | 'weekdays' | 'interval_days' | 'assignee' | 'due_date' | 'effort'>
 
 /** Laadt alles van het huishouden en blijft live in sync met de andere telefoon. */
 export function useHousehold(userId: string) {
@@ -128,6 +129,21 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       if (existing) await sb.from('plan_items').update({ user_id: me.user_id }).eq('id', existing.id)
       else await sb.from('plan_items').insert({ household_id: hh.id, date: today, task_id: task.id, user_id: me.user_id, minutes: task.minutes, extra: true })
       reload()
+    },
+    /** Morgen / andere dag: taak van vandaag halen en pas vanaf die dag weer inplannen. */
+    async postpone(item: PlanItem, days: number) {
+      const to = addDays(today, days)
+      setData((x) => ({ ...x, items: x.items.filter((i) => i.id !== item.id) }))
+      await sb.from('tasks').update({ postponed_to: to }).eq('id', item.task_id)
+      await sb.from('plan_items').delete().eq('id', item.id)
+      reload()
+    },
+    /** Samen gedaan: telt voor allebei in de eerlijke verdeling. */
+    async together(item: PlanItem, on: boolean) {
+      if (!partner) return
+      const helper = on ? (item.done_by === partner.user_id ? me.user_id : partner.user_id) : null
+      setData((x) => ({ ...x, items: x.items.map((i) => (i.id === item.id ? { ...i, helper } : i)) }))
+      await sb.from('plan_items').update({ helper }).eq('id', item.id)
     },
     async startTimer(minutes: number) {
       const end = new Date(Date.now() + minutes * 60_000)

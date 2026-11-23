@@ -13,6 +13,9 @@ export type Payload = { title: string; body: string; tag?: string | null }
 
 /** Stuur een melding naar alle apparaten van één persoon. */
 export async function push(userId: string, payload: Payload) {
+  // Meldingen per soort: respecteer wat iemand in Instellingen heeft uitgezet.
+  const { data: m } = await db.from('members').select('notify').eq('user_id', userId).maybeSingle()
+  if (payload.tag && m?.notify?.[payload.tag] === false) return
   const { data } = await db.from('push_subscriptions').select('*').eq('user_id', userId)
   await Promise.all((data ?? []).map(async (s) => {
     try {

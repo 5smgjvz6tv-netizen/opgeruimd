@@ -15,6 +15,8 @@ export type Task = {
   due_date: string | null
   last_done_at: string | null
   archived: boolean
+  effort: number // 1 = licht, 2 = normaal, 3 = zwaar
+  postponed_to: string | null
   created_at: string
 }
 export type PlanItem = {
@@ -29,10 +31,14 @@ export type PlanItem = {
   done_by: string | null
   extra: boolean
   swap_to: string | null
+  helper: string | null
 }
 
 export const TZ = 'Europe/Amsterdam'
 export const MAX_ITEMS = 6
+/** Zwaarte telt mee in de eerlijke verdeling: punten = minuten × factor. */
+export const EFFORT = { 1: 0.75, 2: 1, 3: 1.5 } as Record<number, number>
+export const points = (minutes: number, effort = 2) => Math.round(minutes * (EFFORT[effort] ?? 1))
 
 const fmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
 export const localDate = (d: Date | string = new Date()) => fmt.format(typeof d === 'string' ? new Date(d) : d)
@@ -48,6 +54,7 @@ export const daysBetween = (a: string, b: string) =>
 /** Sinds welke datum is deze taak "aan de beurt" (op of vóór `date`)? null = niet nodig. */
 export function dueSince(t: Task, date: string): string | null {
   if (t.archived) return null
+  if (t.postponed_to && t.postponed_to > date) return null // verzet naar later
   const last = t.last_done_at ? localDate(t.last_done_at) : null
   const created = localDate(t.created_at)
   if (t.recurrence === 'once') {
@@ -90,15 +97,20 @@ export function planDay(opts: {
   const { date, tasks, members, blockMinutes, restDays, weekLoad, existing } = opts
   if (!members.length || restDays.includes(weekday(date))) return []
   const taken = new Set(existing.map((e) => e.task_id))
-  const load: Record<string, { min: number; n: number }> = {}
-  for (const m of members) load[m.user_id] = { min: 0, n: 0 }
-  for (const e of existing) if (load[e.user_id]) { load[e.user_id].min += e.minutes; load[e.user_id].n++ }
+  const effortOf = new Map(tasks.map((t) => [t.id, t.effort]))
+  const load: Record<string, { min: number; pts: number; n: number }> = {}
+  for (const m of members) load[m.user_id] = { min: 0, pts: 0, n: 0 }
+  for (const e of existing) {
+    const l = load[e.user_id]
+    if (l) { l.min += e.minutes; l.pts += points(e.minutes, effortOf.get(e.task_id)); l.n++ }
+  }
 
   const fits = (id: string, minutes: number) => {
     const l = load[id]
     return !!l && l.n < MAX_ITEMS && (l.n === 0 || l.min + minutes <= blockMinutes + 2)
   }
-  const weight = (id: string) => load[id].min + (weekLoad[id] ?? 0) / 4
+  // Wie (deze week en vandaag) minder zware punten heeft, krijgt de volgende taak.
+  const weight = (id: string) => load[id].pts + (weekLoad[id] ?? 0) / 4
 
   const due = tasks
     .map((t) => ({ t, since: dueSince(t, date) }))
@@ -115,6 +127,7 @@ export function planDay(opts: {
       : members.map((m) => m.user_id).filter((id) => fits(id, t.minutes)).sort((a, b) => weight(a) - weight(b))[0] ?? null
     if (!who) continue
     load[who].min += t.minutes
+    load[who].pts += points(t.minutes, t.effort)
     load[who].n++
     out.push({ task_id: t.id, user_id: who, minutes: t.minutes })
   }
@@ -144,11 +157,14 @@ export async function fillPlan(db: Db, householdId: string, date: string, only?:
     db.from('members').select('user_id').eq('household_id', householdId),
     db.from('tasks').select('*').eq('household_id', householdId).eq('archived', false),
     db.from('plan_items').select('task_id, user_id, minutes').eq('household_id', householdId).eq('date', date),
-    db.from('plan_items').select('done_by, minutes').eq('household_id', householdId).eq('status', 'done').gte('done_at', weekAgo),
+    db.from('plan_items').select('done_by, helper, minutes, tasks(effort)').eq('household_id', householdId).eq('status', 'done').gte('done_at', weekAgo),
   ])
   if (hh.error || !hh.data) return
   const weekLoad: Record<string, number> = {}
-  for (const r of done.data ?? []) if (r.done_by) weekLoad[r.done_by] = (weekLoad[r.done_by] ?? 0) + r.minutes
+  for (const r of done.data ?? []) {
+    const p = points(r.minutes, r.tasks?.effort)
+    for (const id of [r.done_by, r.helper]) if (id) weekLoad[id] = (weekLoad[id] ?? 0) + p
+  }
   const pool = (tasks.data ?? []) as Task[]
   const rows = planDay({
     date,

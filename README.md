@@ -2,7 +2,7 @@
 
 Een huishoud-app voor twee: elke dag een blokje van ±15 minuten, eerlijk verdeeld, met een herinnering als je thuiskomt.
 
-- **App**: React + Vite PWA (`src/`), op je beginscherm te zetten via Safari
+- **App**: React + Vite PWA (`src/`), gehost op Vercel: https://opgeruimd.vercel.app (`npx vercel deploy --prod`)
 - **Server**: Supabase (database, live sync, inloggen) + edge functions (`supabase/functions/`)
   - `arrive`: aangeroepen door de iOS Opdrachten-automatisering "Kom aan → thuis"
   - `tick`: elke minuut via pg_cron: timers, snoozes, ruilverzoeken, reserve-herinnering

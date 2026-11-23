@@ -5,6 +5,13 @@ import { Icon } from '../components/Icon'
 import { sb, useApp } from '../lib/data'
 import { enablePush, isIOS, isStandalone, pushState } from '../lib/push'
 
+const NOTIFY: [string, string, string][] = [
+  ['reminder', 'Herinnering voor je blokje', 'Als je thuiskomt, op je reservetijd of na een snooze'],
+  ['timer', 'Timer is klaar', 'Als je 15 minuten om zijn'],
+  ['swap', 'Ruilverzoeken', 'Als iemand vraagt of je iets overneemt'],
+  ['done', 'Huisgenoot is klaar', 'Als de ander het blokje heeft afgerond'],
+  ['task', 'Nieuwe taak toegevoegd', 'Als de ander een taak toevoegt'],
+]
 const COLORS = ['#0FA37F', '#FF8A5B', '#4F7CFF', '#B45CF0', '#F2B705', '#E5487A']
 
 export function Settings() {
@@ -48,6 +55,18 @@ export function Settings() {
           <button className="btn primary block" onClick={turnOn}><Icon name="bell" size={18} /> Meldingen aanzetten</button>
         )}
         {err && <p className="error">{err}</p>}
+      </section>
+      <section className="card">
+        {NOTIFY.map(([key, label, hint]) => {
+          const on = me.notify?.[key] !== false
+          return (
+            <div className="switch-row" key={key}>
+              <span className="grow">{label}<br /><span className="muted small">{hint}</span></span>
+              <button className="switch" role="switch" aria-checked={on} aria-label={label}
+                onClick={() => act.patchMe({ notify: { ...me.notify, [key]: !on } })} />
+            </div>
+          )
+        })}
       </section>
 
       <h3 className="group-title">Thuiskomen</h3>

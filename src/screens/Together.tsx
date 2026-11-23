@@ -2,13 +2,13 @@ import { addDays, localDate } from '../../supabase/functions/_shared/planner'
 import { Avatar, DAYS } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { useApp } from '../lib/data'
-import { dayState, roomScores, streak, weekMinutes, weekStart } from '../lib/stats'
+import { dayState, roomScores, streak, weekEffort, weekStart } from '../lib/stats'
 
 export function Together() {
   const { d } = useApp()
   const s = streak(d)
-  const week = weekMinutes(d)
-  const total = d.members.reduce((a, m) => a + (week[m.user_id] ?? 0), 0)
+  const week = weekEffort(d)
+  const total = d.members.reduce((a, m) => a + (week[m.user_id]?.pts ?? 0), 0)
   const { rooms, total: house } = roomScores(d)
   const ws = weekStart()
   const carried = d.items.filter((i) => i.date >= ws && i.date < addDays(ws, 7) && i.status === 'todo' && i.date < localDate()).length
@@ -34,15 +34,15 @@ export function Together() {
 
       <section className="card">
         <h2>Deze week</h2>
-        <p className="muted small">Minuten huishouden sinds maandag{carried ? ` · ${carried} doorgeschoven` : ''}</p>
+        <p className="muted small">Inzet sinds maandag: minuten, zware taken tellen zwaarder{carried ? ` · ${carried} doorgeschoven` : ''}</p>
         {total ? (
           <>
             <div className="fair-bar">
-              {d.members.map((m) => <i key={m.user_id} style={{ flex: week[m.user_id] ?? 0, background: m.color }} />)}
+              {d.members.map((m) => <i key={m.user_id} style={{ flex: week[m.user_id]?.pts ?? 0, background: m.color }} />)}
             </div>
             <div className="fair-legend">
               {d.members.map((m) => (
-                <span key={m.user_id}><Avatar m={m} size={20} /> {m.user_id === d.me.user_id ? 'Jij' : m.name} <b>{week[m.user_id] ?? 0} min</b></span>
+                <span key={m.user_id}><Avatar m={m} size={20} /> {m.user_id === d.me.user_id ? 'Jij' : m.name} <b>{week[m.user_id]?.pts ?? 0} pt</b> <span className="muted small">({week[m.user_id]?.min ?? 0} min)</span></span>
               ))}
             </div>
           </>

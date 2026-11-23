@@ -12,7 +12,11 @@ import { Login, Onboarding } from './screens/Welcome'
 export function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
   useEffect(() => {
-    sb.auth.getSession().then(({ data }) => setSession(data.session))
+    sb.auth.getSession().then(async ({ data }) => {
+      // Bestaat het account nog? (anders blijft een oude sessie hangen)
+      if (data.session && (await sb.auth.getUser()).error) { await sb.auth.signOut(); return setSession(null) }
+      setSession(data.session)
+    })
     const { data } = sb.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => data.subscription.unsubscribe()
   }, [])

@@ -4,7 +4,7 @@ import { guess, ROOMS } from '../lib/rooms'
 import { Chips, DAYS } from './Bits'
 import { Sheet } from './Sheet'
 
-const blank = (): TaskInput => ({ title: '', room: null, minutes: 10, recurrence: 'once', weekdays: [], interval_days: 7, assignee: null, due_date: null })
+const blank = (): TaskInput => ({ title: '', room: null, minutes: 10, recurrence: 'once', weekdays: [], interval_days: 7, assignee: null, due_date: null, effort: 2 })
 
 export function TaskSheet({ open, onClose, task }: { open: boolean; onClose: () => void; task?: Task | null }) {
   const { d, act } = useApp()
@@ -54,6 +54,10 @@ export function TaskSheet({ open, onClose, task }: { open: boolean; onClose: () 
         <label className="label">Hoe lang ongeveer?</label>
         <Chips value={f.minutes} onChange={(v) => { setTouched((t) => ({ ...t, minutes: true })); set({ minutes: v }) }}
           options={[5, 10, 15, 20, 30].map((v) => ({ v, label: `${v} min` }))} />
+
+        <label className="label">Hoe zwaar?</label>
+        <Chips value={f.effort} onChange={(v) => set({ effort: v })}
+          options={[{ v: 1, label: '🪶 Licht' }, { v: 2, label: 'Normaal' }, { v: 3, label: '💪 Zwaar' }]} />
 
         <label className="label">Wanneer?</label>
         <div className="segmented">

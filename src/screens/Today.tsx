@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { localDate, suggestExtras, weekday } from '../../supabase/functions/_shared/planner'
 import { Avatar, Check, Ring } from '../components/Bits'
 import { Icon } from '../components/Icon'
+import { Sheet } from '../components/Sheet'
 import { SnoozeSheet } from '../components/SnoozeSheet'
 import { useApp, type Member, type PlanItem } from '../lib/data'
 import { isStandalone, pushState } from '../lib/push'
@@ -56,6 +57,7 @@ export function Today({ goSettings }: { goSettings: () => void }) {
   }, [running, endsAt, act])
 
   const [snoozeOpen, setSnoozeOpen] = useState(false)
+  const [menu, setMenu] = useState<PlanItem | null>(null)
   const [showExtras, setShowExtras] = useState(false)
   const snoozed = !!me.snooze_reason && (me.snooze_on_arrive || (!!me.snooze_until && Date.parse(me.snooze_until) > Date.now()))
   const minutesLeft = running ? Math.floor(left / 60) : Math.max(0, hh.block_minutes - doneMin)
@@ -133,8 +135,7 @@ export function Today({ goSettings }: { goSettings: () => void }) {
 
             <ul className="tasks">
               {mine.map((i) => (
-                <TaskRow key={i.id} item={i} title={title(i.task_id)} partner={partner}
-                  onToggle={() => act.toggle(i)} onSwap={partner && !i.swap_to ? () => act.askSwap(i, title(i.task_id)) : undefined} />
+                <TaskRow key={i.id} item={i} title={title(i.task_id)} onToggle={() => act.toggle(i)} onMore={() => setMenu(i)} />
               ))}
             </ul>
 
@@ -187,6 +188,7 @@ export function Today({ goSettings }: { goSettings: () => void }) {
               {theirs.map((i) => (
                 <li key={i.id} className={i.status === 'done' ? 'done' : ''}>
                   <span className="dot">{i.status === 'done' ? '✓' : ''}</span>{title(i.task_id)}
+                  {i.helper && <span className="tag">👫 samen</span>}
                   {i.swap_to === me.user_id && <span className="tag">vraagt jou</span>}
                 </li>
               ))}
@@ -196,11 +198,12 @@ export function Today({ goSettings }: { goSettings: () => void }) {
       )}
 
       <SnoozeSheet open={snoozeOpen} onClose={() => setSnoozeOpen(false)} />
+      <ItemMenu item={menu} title={menu ? title(menu.task_id) : ''} onClose={() => setMenu(null)} />
     </div>
   )
 }
 
-function TaskRow({ item, title, partner, onToggle, onSwap }: { item: PlanItem; title: string; partner: Member | null; onToggle: () => void; onSwap?: () => void }) {
+function TaskRow({ item, title, onToggle, onMore }: { item: PlanItem; title: string; onToggle: () => void; onMore: () => void }) {
   const { d } = useApp()
   const t = d.tasks.find((x) => x.id === item.task_id)
   const done = item.status === 'done'
@@ -212,12 +215,46 @@ function TaskRow({ item, title, partner, onToggle, onSwap }: { item: PlanItem; t
         <span className="muted small">{room(t?.room ?? null).icon} {room(t?.room ?? null).label} · {item.minutes} min{item.extra ? ' · extraatje' : ''}</span>
       </button>
       {item.swap_to && <span className="tag">gevraagd</span>}
-      {!done && onSwap && partner && (
-        <button className="icon-btn" onClick={onSwap} aria-label={`Vraag ${partner.name} om ${title}`} title={`Vraag ${partner.name}`}>
-          <Icon name="swap" size={18} />
-        </button>
-      )}
+      {item.helper && <span className="tag">👫 samen</span>}
+      <button className="icon-btn" onClick={onMore} aria-label={`Meer opties voor ${title}`}><Icon name="more" size={20} /></button>
     </li>
+  )
+}
+
+/** Opties per taak: verzetten, aan de ander vragen, samen gedaan. */
+function ItemMenu({ item, title, onClose }: { item: PlanItem | null; title: string; onClose: () => void }) {
+  const { d, act } = useApp()
+  const p = d.partner
+  const live = item && d.items.find((i) => i.id === item.id)
+  const run = (fn: () => unknown) => async () => { onClose(); await fn() }
+  const nextSat = ((5 - weekday(localDate()) + 7) % 7) || 7
+  return (
+    <Sheet open={!!item} onClose={onClose} title={title}>
+      {live && (live.status === 'done' ? (
+        p ? (
+          <div className="menu">
+            <button className="menu-item" onClick={run(() => act.together(live, !live.helper))}>
+              <span>👫</span><span className="grow">{live.helper ? 'Toch niet samen gedaan' : `Samen gedaan met ${p.name}`}<br />
+                <span className="muted small">Telt dan voor jullie allebei in het weekoverzicht</span></span>
+            </button>
+          </div>
+        ) : <p className="muted">Deze taak is al afgevinkt.</p>
+      ) : (
+        <div className="menu">
+          <p className="label">Verzetten naar</p>
+          <button className="menu-item" onClick={run(() => act.postpone(live, 1))}><Icon name="calendar" size={20} /><span className="grow">Morgen</span></button>
+          <button className="menu-item" onClick={run(() => act.postpone(live, 2))}><Icon name="calendar" size={20} /><span className="grow">Overmorgen</span></button>
+          <button className="menu-item" onClick={run(() => act.postpone(live, nextSat))}><Icon name="calendar" size={20} /><span className="grow">Het weekend</span></button>
+          <button className="menu-item" onClick={run(() => act.postpone(live, 7))}><Icon name="calendar" size={20} /><span className="grow">Volgende week</span></button>
+          {p && !live.swap_to && <>
+            <p className="label">Samen</p>
+            <button className="menu-item" onClick={run(() => act.askSwap(live, title))}>
+              <Icon name="swap" size={20} /><span className="grow">Vraag {p.name} om het over te nemen</span>
+            </button>
+          </>}
+        </div>
+      ))}
+    </Sheet>
   )
 }
 
