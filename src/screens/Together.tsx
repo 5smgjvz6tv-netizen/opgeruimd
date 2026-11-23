@@ -108,10 +108,23 @@ export function Together() {
   )
 }
 
+function localTimedWeekMin(ws: string) {
+  let totalSec = 0
+  for (let i = 0; i < 7; i++) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(`opgeruimd.timer.${addDays(ws, i)}`) ?? 'null')
+      if (raw && typeof raw.elapsedSec === 'number') totalSec += raw.elapsedSec
+    } catch { /* */ }
+  }
+  return Math.round(totalSec / 60)
+}
+
 function Scoreboard() {
   const { d } = useApp()
   const ws = weekStart()
   const now = scores(d, ws, addDays(ws, 7))
+  const myTimed = localTimedWeekMin(ws)
+  if (now[d.me.user_id] && myTimed > now[d.me.user_id].min) now[d.me.user_id] = { ...now[d.me.user_id], min: myTimed }
   const last = scores(d, addDays(ws, -7), ws)
   const ranked = [...d.members].sort((a, b) => now[b.user_id].pts - now[a.user_id].pts)
   const max = Math.max(1, ...ranked.map((m) => now[m.user_id].pts))
@@ -150,7 +163,8 @@ function SoloWeek() {
   const { d } = useApp()
   const ws = weekStart()
   const id = d.me.user_id
-  const now = scores(d, ws, addDays(ws, 7))[id]
+  const rawNow = scores(d, ws, addDays(ws, 7))[id]
+  const now = { ...rawNow, min: Math.max(rawNow.min, localTimedWeekMin(ws)) }
   const last = scores(d, addDays(ws, -7), ws)[id]
   const best = Math.max(now.pts, ...Array.from({ length: 8 }, (_, i) => scores(d, addDays(ws, -7 * (i + 1)), addDays(ws, -7 * i))[id].pts))
   const diff = now.pts - last.pts

@@ -128,11 +128,24 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
   const startRoundTimer = () => {
     const startSec = paused && ts.pausedLeftSec
       ? ts.pausedLeftSec
-      : remainingTodaySec >= 30 ? remainingTodaySec : hh.block_minutes * 60
-    const nextTotal = paused ? totalSec : hh.block_minutes * 60
-    updateTs({ totalSec: nextTotal, pausedLeftSec: null, elapsedSec: remainingTodaySec >= 30 || paused ? ts.elapsedSec : 0, startedAt: Date.now() })
+      : remainingTodaySec >= 30 ? remainingTodaySec : 5 * 60
+    const nextTotal = paused ? totalSec : Math.max(hh.block_minutes * 60, ts.elapsedSec + startSec)
+    updateTs({ totalSec: nextTotal, pausedLeftSec: null, elapsedSec: ts.elapsedSec, startedAt: Date.now() })
     act.startTimer(startSec / 60)
     if (snoozed) act.unsnooze()
+    setTimeUp(false); haptic()
+  }
+  const extendTimer = (extraMin = 5) => {
+    const addSec = extraMin * 60
+    const nextLeft = (running ? left : paused ? (ts.pausedLeftSec ?? 0) : 0) + addSec
+    const gained = running && ts.startedAt ? Math.max(0, Math.round((Date.now() - ts.startedAt) / 1000)) : 0
+    updateTs({
+      totalSec: totalSec + addSec,
+      pausedLeftSec: null,
+      elapsedSec: ts.elapsedSec + gained,
+      startedAt: Date.now(),
+    })
+    act.startTimer(nextLeft / 60)
     setTimeUp(false); haptic()
   }
   const pauseRoundTimer = () => {
@@ -228,7 +241,14 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
                 </div>
               </div>
             )}
-            {timeUp && !running && <div className="notice"><Icon name="alarm" size={18} />{t('today.timeUp')}<button onClick={() => setTimeUp(false)}><Icon name="x" size={16} /></button></div>}
+            {timeUp && !running && (
+              <div className="notice">
+                <Icon name="alarm" size={18} />
+                <span className="grow">{t('today.timeUp')}</span>
+                <button className="btn primary sm" onClick={() => extendTimer(5)}>{t('today.extendMore')}</button>
+                <button onClick={() => setTimeUp(false)} aria-label={t('common.close')}><Icon name="x" size={16} /></button>
+              </div>
+            )}
             {snoozed && !running && (
               <div className="snoozed">
                 <Ic name="moon" tone="gray" />
@@ -243,6 +263,7 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
                 {running ? (
                   <>
                     <button className="btn primary grow" onClick={() => stopRoundTimer(true)}><Icon name="check" size={18} />{t('today.finish')}</button>
+                    <button className="btn tinted" onClick={() => extendTimer(5)}>{t('today.extendBtn')}</button>
                     <button className="btn soft" onClick={pauseRoundTimer}>{t('today.pause')}</button>
                   </>
                 ) : paused ? (
@@ -256,7 +277,9 @@ export function Today({ goSettings, goProgress, onLog, onAdd }: { goSettings: ()
                     <button className="btn primary grow" onClick={startRoundTimer}>
                       <Icon name="play" size={16} />{ts.elapsedSec >= 30 && remainingTodaySec >= 30
                         ? t('today.continue', { min: Math.ceil(remainingTodaySec / 60) })
-                        : t('today.start', { min: hh.block_minutes })}</button>
+                        : ts.elapsedSec >= 30 && remainingTodaySec < 30
+                          ? t('today.extendMore')
+                          : t('today.start', { min: hh.block_minutes })}</button>
                     {!snoozed && <button className="btn soft" onClick={() => setSnoozeOpen(true)}><Icon name="moon" size={18} />{t('today.later')}</button>}
                   </>
                 )}
