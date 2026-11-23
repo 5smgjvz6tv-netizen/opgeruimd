@@ -1,6 +1,8 @@
 import { CATALOG, type CatalogTask } from './catalog'
 import { t } from './i18n'
 
+export type CleanDepth = 'basic' | 'normal' | 'thorough'
+
 export type HomeLayout = {
   floors: string[][]
   placements?: Record<string, number[]>
@@ -14,6 +16,7 @@ export type HomeLayout = {
   youngKids?: boolean
   hasCleaner?: boolean
   cooksOften?: boolean
+  depth?: CleanDepth
   // Legacy optional fields kept for backwards compatibility with saved layouts
   pets?: boolean
 }
@@ -28,7 +31,7 @@ function suggestedFloors(count: number): string[][] {
 }
 export const initialLayout = (): HomeLayout => ({
   floors: suggestedFloors(1), placements: {}, dishwasher: false, garden: false, balcony: false,
-  cat: false, dog: false, plants: false, workFromHome: false, youngKids: false, hasCleaner: false, cooksOften: false,
+  cat: false, dog: false, plants: false, workFromHome: false, youngKids: false, hasCleaner: false, cooksOften: false, depth: 'normal',
 })
 
 function roomFloors(floors: string[][], id: string) {
@@ -78,11 +81,23 @@ export function roomGroups(home: HomeLayout) {
 }
 export function starterTasks(home: HomeLayout): CatalogTask[] {
   const rooms = home.floors.flat()
+  const depth: CleanDepth = home.depth ?? 'normal'
   const floorTasks = home.hasCleaner
     ? []
     : home.floors.length === 1
       ? ['v-zuig']
       : ['v-zuig-beneden', 'v-zuig-boven', ...['v-zuig-2', 'v-zuig-3'].slice(0, home.floors.length - 2)]
+  const weekly = depth === 'basic' ? [] : [
+    ...(rooms.includes('badkamer') && !home.hasCleaner ? ['b-schoonmaken'] : []),
+    ...(rooms.includes('toilet') && !home.hasCleaner ? ['t-wc'] : []),
+    ...(rooms.includes('slaapkamer') ? ['s-bed'] : []),
+    ...(rooms.includes('was') ? ['l-donker'] : []),
+  ]
+  const monthly = depth !== 'thorough' ? [] : [
+    ...(rooms.includes('keuken') ? ['k-koelkast'] : []),
+    ...(rooms.includes('woonkamer') && !home.hasCleaner ? ['w-ramen'] : []),
+    ...(rooms.includes('was') ? ['l-wasmachine'] : []),
+  ]
   const ids = [
     ...(rooms.includes('slaapkamer') ? ['s-bed-opmaken'] : []),
     ...(rooms.includes('keuken') ? ['k-vuilnis', home.dishwasher ? 'k-vaatwasser-uit' : 'k-afwas'] : []),
@@ -98,6 +113,8 @@ export function starterTasks(home: HomeLayout): CatalogTask[] {
     ...(home.plants ? ['w-planten'] : []),
     ...(home.garden ? ['g-vegen'] : []),
     ...(home.balcony ? ['b-vegen'] : []),
+    ...weekly,
+    ...monthly,
   ]
   const catalog = CATALOG.flatMap(group => group.tasks)
   return [...new Set(ids)].map(id => catalog.find(task => task.id === id)).filter((task): task is CatalogTask => !!task)
@@ -132,6 +149,9 @@ export function recommendRound(home: HomeLayout, size: number, restDays: number[
   if (home.garden) raw += 3
   if (home.balcony) raw += 1.5
   if (home.hasCleaner) raw *= 0.6
+  const depth = home.depth ?? 'normal'
+  if (depth === 'basic') raw *= 0.72
+  else if (depth === 'thorough') raw *= 1.22
 
   const activeDays = Math.max(1, 7 - restDays.length)
   const houseMinutes = Math.max(10, Math.round((raw * 7) / activeDays / 5) * 5)

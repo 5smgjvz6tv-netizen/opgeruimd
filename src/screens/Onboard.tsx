@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Check, Confetti, Ic, Ring, Segmented, XpBar } from '../components/Bits'
 import { HomeLayoutPicker, HousePortrait } from '../components/HomeLayoutPicker'
 import { LegalSheet, type LegalDoc } from '../components/LegalSheet'
-import { initialLayout, recommendRound, starterTasks, roomGroups } from '../lib/homeLayout'
+import { initialLayout, recommendRound, starterTasks, roomGroups, type CleanDepth } from '../lib/homeLayout'
 import { DayPicker, TimeSlider, Stepper } from '../components/Controls'
 import { Bas } from '../components/Bas'
 import { Icon } from '../components/Icon'
@@ -144,6 +144,18 @@ export function Onboard({ authed, userId, onDone }: { authed?: boolean; userId?:
                   </div>
                 </div>
                 <div className="card rhythm-card">
+                  <div className="rhythm-sec">
+                    <span className="label">{t('ob.depth')}</span>
+                    <Segmented value={layout.depth ?? 'normal'} onChange={(v) => {
+                      haptic(4)
+                      const nextHome = { ...layout, depth: v as CleanDepth }
+                      set({ layout: nextHome, sel: starterTasks(nextHome).map((task) => task.id) })
+                    }} options={[
+                      { v: 'basic', label: t('ob.depth.basic') },
+                      { v: 'normal', label: t('ob.depth.normal') },
+                      { v: 'thorough', label: t('ob.depth.thorough') },
+                    ]} />
+                  </div>
                   <div className="rhythm-sec">
                     <div className="rhythm-head">
                       <span className="label">{t('set.round')}</span>
