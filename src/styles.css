@@ -56,6 +56,7 @@ input, textarea { font: inherit; color: inherit; }
 .hdr { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 12px 4px 0; min-height: 52px; }
 .hdr h1 { font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; }
 .hdr .eyebrow { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+.hdr-sub { font-size: 14px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
 
 /* ——— Groepen & rijen (de basis van bijna elk scherm) ——— */
 .group { display: flex; flex-direction: column; gap: 8px; }
@@ -139,6 +140,11 @@ button.row:active { background: var(--fill); }
 .round-foot .glyph { width: 15px; height: 15px; }
 .round-foot button { color: var(--brand-ink); font-weight: 600; margin-left: auto; }
 .timer { margin-top: 14px; padding: 12px 14px; border-radius: 14px; background: var(--brand-soft); display: flex; align-items: center; gap: 14px; }
+.timer.paused { background: var(--fill); }
+.timer.paused .timer-num { color: var(--muted); }
+.timer.paused .xpbar i { background: var(--muted); }
+.timer-meta { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.timer-sub { font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 .timer-num { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--brand-ink); line-height: 1; }
 .timer .xpbar { flex: 1; height: 8px; background: color-mix(in srgb, var(--brand) 16%, transparent); }
 .timer .xpbar i { background: var(--brand); transition: width 1s linear; }
@@ -243,9 +249,14 @@ button.row:active { background: var(--fill); }
 .stepper button:disabled { color: var(--faint); }
 .stepper button:active:not(:disabled) { background: var(--card); }
 .stepper b { min-width: 20px; text-align: center; font-variant-numeric: tabular-nums; }
-.colors { display: flex; gap: 8px; flex-wrap: wrap; }
-.swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--card); box-shadow: 0 0 0 1px var(--line); }
-.swatch.on { box-shadow: 0 0 0 2px var(--text); }
+.color-block { display: flex; flex-direction: column; padding-bottom: 14px; }
+.colors { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; padding: 4px 14px 0; place-items: center; }
+.swatch { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 2px solid transparent; transition: transform 150ms, box-shadow 150ms; }
+.swatch:active { transform: scale(0.9); }
+.swatch.on { box-shadow: 0 0 0 2.5px var(--card), 0 0 0 4.5px currentColor; }
+.swatch .glyph { color: #fff; }
+.swatch .glyph [stroke] { stroke-width: 2.8; }
+.swatch .glyph [fill='currentColor'] { display: none; }
 .steps-list { counter-reset: s; display: flex; flex-direction: column; gap: 10px; padding: 4px 14px 14px; font-size: 14px; }
 .steps-list li { counter-increment: s; position: relative; padding-left: 30px; line-height: 1.4; }
 .steps-list li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-ink); font-size: 12px; font-weight: 700; display: grid; place-items: center; }

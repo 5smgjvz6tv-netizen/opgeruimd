@@ -95,7 +95,6 @@ export function Settings() {
       <div className="group">
         <h3 className="group-h">{t('set.feel')}</h3>
         <Feel />
-        <p className="group-f">{t('set.feelFoot')}</p>
       </div>
 
       <div className="group">
@@ -282,10 +281,20 @@ function Profile() {
         <label className="row"><Avatar m={{ name, color: me.color }} size={30} />
           <input className="field" style={{ border: 0, padding: '6px 0', background: 'transparent' }} value={name} aria-label={t('set.name')}
             onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name.trim() !== me.name && act.patchMe({ name: name.trim() })} /></label>
-        <div className="row"><Ic name="palette" /><span className="row-main"><span className="row-title">{t('set.color')}</span></span></div>
-        <div style={{ padding: '0 14px 14px 52px' }}><div className="colors">
-          {COLORS.map((c) => <button key={c} className={'swatch' + (me.color === c ? ' on' : '')} style={{ background: c }} aria-label={c} aria-pressed={me.color === c} onClick={() => { haptic(4); act.patchMe({ color: c }) }} />)}
-        </div></div>
+        <div className="color-block">
+          <div className="row" style={{ minHeight: 44, paddingBottom: 6 }}><Ic name="palette" /><span className="row-main"><span className="row-title">{t('set.color')}</span></span></div>
+          <div className="colors">
+            {COLORS.map((c) => {
+              const on = me.color === c
+              return (
+                <button key={c} className={'swatch' + (on ? ' on' : '')} style={{ background: c, color: c }} aria-label={c} aria-pressed={on}
+                  onClick={() => { haptic(4); act.patchMe({ color: c }) }}>
+                  {on && <Icon name="check" size={14} />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       </div>
       <p className="group-f">{t('set.youFoot')}</p>
     </div>

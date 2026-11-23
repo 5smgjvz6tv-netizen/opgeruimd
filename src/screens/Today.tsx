@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays, localDate, suggestExtras, weekday } from '../../supabase/functions/_shared/planner'
-import { Avatar, Check, Confetti, Ic, Ring, XpBar } from '../components/Bits'
-import { RoundCoach } from '../components/Bas'
+import { Avatar, Check, Chips, Confetti, Ic, Ring, XpBar } from '../components/Bits'
+import { Bas, RoundCoach } from '../components/Bas'
 import { Icon } from '../components/Icon'
 import { Sheet } from '../components/Sheet'
 import { SnoozeSheet } from '../components/SnoozeSheet'
-import { useApp, type Member, type PlanItem } from '../lib/data'
+import { useApp, type Data, type Member, type PlanItem, type Task } from '../lib/data'
 import { floatText, haptic, sound } from '../lib/feel'
 import { levelOf, weeklyChallenge, xpOf } from '../lib/game'
 import { list, locale, plural, t } from '../lib/i18n'
@@ -16,9 +16,53 @@ import { adaptiveRoundTip, streak, weekStart } from '../lib/stats'
 const greet = () => { const h = new Date().getHours(); return t(h < 6 ? 'today.night' : h < 12 ? 'today.morning' : h < 18 ? 'today.afternoon' : 'today.evening') }
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
+type TimerStore = { totalSec: number; pausedLeftSec: number | null; elapsedSec: number; startedAt: number | null }
+const timerKey = (day: string) => `opgeruimd.timer.${day}`
+function loadTimer(day: string, blockMin: number): TimerStore {
+  try {
+    const raw = JSON.parse(localStorage.getItem(timerKey(day)) ?? 'null')
+    if (raw && typeof raw.elapsedSec === 'number') return raw
+  } catch { /* */ }
+  return { totalSec: blockMin * 60, pausedLeftSec: null, elapsedSec: 0, startedAt: null }
+}
+function saveTimer(day: string, s: TimerStore) {
+  try { localStorage.setItem(timerKey(day), JSON.stringify(s)) } catch { /* */ }
+}
+
+const learnedKey = (hid: string) => `opgeruimd.learned.${hid}`
+function hasLearned(hid: string, taskId: string) {
+  try { return !!JSON.parse(localStorage.getItem(learnedKey(hid)) ?? '{}')[taskId] } catch { return false }
+}
+function markLearned(hid: string, taskId: string) {
+  try {
+    const cur = JSON.parse(localStorage.getItem(learnedKey(hid)) ?? '{}')
+    cur[taskId] = true
+    localStorage.setItem(learnedKey(hid), JSON.stringify(cur))
+  } catch { /* */ }
+}
+
+function householdGreeting(d: Data, allDone: boolean, rest: boolean, s: number) {
+  if (allDone) return t('today.greet.done')
+  if (rest) return t(d.solo ? 'today.greet.restSolo' : 'today.greet.restTeam')
+  const home = d.household.home_layout
+  const min = d.household.block_minutes
+  if (home?.cat || home?.dog || home?.pets) return t('today.greet.pets')
+  if (home?.youngKids) return t('today.greet.kids', { min })
+  if (home?.hasCleaner) return t('today.greet.cleaner')
+  if (home?.workFromHome) return t('today.greet.wfh', { min })
+  if (!d.solo && d.others.length) return t('today.greet.team', { mates: d.others.map((o) => o.name).join(' & ') })
+  if (s >= 3) return t('today.greet.streak', { n: s })
+  return t('today.greet.default', { min })
+}
+
 function useNow(active: boolean) {
   const [now, setNow] = useState(Date.now())
-  useEffect(() => { if (!active) return; const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i) }, [active])
+  useEffect(() => {
+    if (!active) return
+    setNow(Date.now())
+    const i = setInterval(() => setNow(Date.now()), 500)
+    return () => clearInterval(i)
+  }, [active])
   return now
 }
 
@@ -52,20 +96,60 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
   const wasDone = useRef(allDone)
   useEffect(() => { if (allDone && !wasDone.current) { setParty(Date.now()); sound('done'); haptic([10, 60, 10]) } wasDone.current = allDone }, [allDone])
 
-  // Timer
+  // Timer met nauwkeurige aftelling, pauzeren/hervatten en echte bestede tijd
+  const [ts, setTs] = useState<TimerStore>(() => loadTimer(today, hh.block_minutes))
+  const updateTs = (next: TimerStore) => { setTs(next); saveTimer(today, next) }
   const endsAt = me.timer_ends_at ? Date.parse(me.timer_ends_at) : 0
   const now = useNow(!!endsAt)
-  const left = Math.max(0, Math.round((endsAt - now) / 1000))
-  const running = endsAt > 0 && left > 0
+  const totalSec = Math.max(60, ts.totalSec || hh.block_minutes * 60)
+  const rawLeft = endsAt ? Math.max(0, Math.round((endsAt - now) / 1000)) : 0
+  const running = endsAt > 0 && rawLeft > 0
+  const left = running ? Math.min(totalSec, rawLeft) : (ts.pausedLeftSec ?? 0)
+  const paused = !running && ts.pausedLeftSec !== null && ts.pausedLeftSec > 0
+  const liveElapsedSec = ts.elapsedSec + (running && ts.startedAt ? Math.max(0, Math.round((now - ts.startedAt) / 1000)) : 0)
+  const timedMinutes = Math.max(0, Math.round(liveElapsedSec / 60))
+
   const [timeUp, setTimeUp] = useState(false)
   const wasRunning = useRef(running)
-  useEffect(() => { if (wasRunning.current && !running && endsAt) { sound('done'); haptic([20, 80, 20]); setTimeUp(true); act.stopTimer() } wasRunning.current = running }, [running, endsAt, act])
+  useEffect(() => {
+    if (wasRunning.current && !running && endsAt) {
+      sound('done'); haptic([20, 80, 20]); setTimeUp(true)
+      const gained = ts.startedAt ? Math.max(0, Math.round((Date.now() - ts.startedAt) / 1000)) : 0
+      updateTs({ totalSec, pausedLeftSec: null, elapsedSec: ts.elapsedSec + gained, startedAt: null })
+      act.stopTimer()
+    }
+    wasRunning.current = running
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, endsAt, act])
+
+  const startRoundTimer = () => {
+    const startSec = paused && ts.pausedLeftSec ? ts.pausedLeftSec : hh.block_minutes * 60
+    const nextTotal = paused ? totalSec : hh.block_minutes * 60
+    updateTs({ totalSec: nextTotal, pausedLeftSec: null, elapsedSec: ts.elapsedSec, startedAt: Date.now() })
+    act.startTimer(startSec / 60)
+    if (snoozed) act.unsnooze()
+    setTimeUp(false); haptic()
+  }
+  const pauseRoundTimer = () => {
+    const gained = ts.startedAt ? Math.max(0, Math.round((Date.now() - ts.startedAt) / 1000)) : 0
+    updateTs({ totalSec, pausedLeftSec: Math.max(1, left), elapsedSec: ts.elapsedSec + gained, startedAt: null })
+    act.stopTimer(); haptic(4)
+  }
+  const stopRoundTimer = (finish = false) => {
+    const gained = running && ts.startedAt ? Math.max(0, Math.round((Date.now() - ts.startedAt) / 1000)) : 0
+    updateTs({ totalSec: hh.block_minutes * 60, pausedLeftSec: null, elapsedSec: ts.elapsedSec + gained, startedAt: null })
+    act.stopTimer()
+    if (finish) setShowExtras(true)
+    haptic(4)
+  }
 
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [menu, setMenu] = useState<PlanItem | null>(null)
+  const [learnTask, setLearnTask] = useState<Task | null>(null)
+  const askedThisSession = useRef(false)
   const [showExtras, setShowExtras] = useState(false)
   const snoozed = !!me.snooze_reason && (me.snooze_on_arrive || (!!me.snooze_until && Date.parse(me.snooze_until) > Date.now()))
-  const minutesLeft = running ? Math.floor(left / 60) : Math.max(0, hh.block_minutes - doneMin)
+  const minutesLeft = (running || paused) ? Math.floor(left / 60) : Math.max(0, hh.block_minutes - doneMin)
   const planned = useMemo(() => new Set(todays.map((i) => i.task_id)), [todays])
   const extras = (allDone || showExtras || !mine.length) && !rest ? suggestExtras(d.tasks, today, planned, minutesLeft) : []
   const [push, setPush] = useState('on')
@@ -78,9 +162,20 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
   const adapt = adaptDismissed ? null : adaptiveRoundTip(d)
   const dismissAdapt = () => { try { localStorage.setItem(adaptKey, '1') } catch { /* */ } setAdaptDismissed(true) }
 
+  // Credits voor huisgenoten die vandaag iets hebben afgevinkt
+  const mateDoneToday = todays.filter((i) => i.status === 'done' && i.done_by && i.done_by !== me.user_id)
+
   const toggle = (i: PlanItem, el?: Element | null) => {
-    if (i.status !== 'done') { haptic(); sound('pop'); floatText(el ?? null, `+${xpItem(i)} XP`) } else haptic(4)
+    const completing = i.status !== 'done'
+    if (completing) { haptic(); sound('pop'); floatText(el ?? null, `+${xpItem(i)} XP`) } else haptic(4)
     act.toggle(i)
+    if (completing && !askedThisSession.current) {
+      const task = taskOf(i.task_id)
+      if (task && task.recurrence !== 'once' && !hasLearned(hh.id, task.id)) {
+        askedThisSession.current = true
+        setTimeout(() => setLearnTask(task), 550)
+      }
+    }
   }
   const time = me.fallback_time?.slice(0, 5)
   const reminderNote = time ? t('today.reminderBoth', { time }) : t('today.reminderArrive')
@@ -91,6 +186,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
         <div>
           <p className="eyebrow" style={{ textTransform: 'capitalize' }}>{new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           <h1>{greet()}, {me.name}</h1>
+          <p className="hdr-sub">{householdGreeting(d, allDone, rest, s)}</p>
         </div>
       </header>
 
@@ -105,18 +201,21 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
             <div className="round-head">
               <Ring size={68} stroke={7} value={doneItems.length / mine.length}>{allDone ? <Icon name="check" size={20} /> : `${doneItems.length}/${mine.length}`}</Ring>
               <div className="grow">
-                <h2>{allDone ? t('today.done') : running ? t('today.running') : t('today.round')}</h2>
-                <p className="row-sub">{allDone ? t('today.doneSub', { xp: earnedXp, min: doneMin })
+                <h2>{allDone ? t('today.done') : running ? t('today.running') : paused ? t('today.paused') : t('today.round')}</h2>
+                <p className="row-sub">{allDone ? t('today.doneSub', { xp: earnedXp, min: timedMinutes > 0 ? timedMinutes : doneMin })
                   : t('today.roundSub', { n: mine.length, tasks: plural(mine.length), min: totalMin, xp: totalXp })}</p>
               </div>
             </div>
 
             <RoundCoach done={doneItems.length} total={mine.length} nextTask={title(mine.find(i => i.status !== 'done')?.task_id ?? '')} />
 
-            {running && (
-              <div className={'timer' + (left <= 10 ? ' ending' : '')} role="timer">
+            {(running || paused) && (
+              <div className={'timer' + (paused ? ' paused' : left <= 10 ? ' ending' : '')} role="timer">
                 <span className="timer-num">{mmss(left)}</span>
-                <XpBar frac={left / (hh.block_minutes * 60)} />
+                <div className="timer-meta">
+                  <XpBar frac={left / totalSec} />
+                  {timedMinutes > 0 && <span className="timer-sub">{t('today.elapsed', { min: timedMinutes })}</span>}
+                </div>
               </div>
             )}
             {timeUp && !running && <div className="notice"><Icon name="alarm" size={18} />{t('today.timeUp')}<button onClick={() => setTimeUp(false)}><Icon name="x" size={16} /></button></div>}
@@ -129,16 +228,22 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
               </div>
             )}
 
-            {(!allDone || running) && (
+            {(!allDone || running || paused) && (
               <div className="btn-row">
                 {running ? (
                   <>
-                    <button className="btn primary grow" onClick={() => { act.stopTimer(); setShowExtras(true) }}><Icon name="check" size={18} />{t('today.finish')}</button>
-                    <button className="btn soft" onClick={act.stopTimer} aria-label={t('today.stop')}><Icon name="stop" size={16} /></button>
+                    <button className="btn primary grow" onClick={() => stopRoundTimer(true)}><Icon name="check" size={18} />{t('today.finish')}</button>
+                    <button className="btn soft" onClick={pauseRoundTimer}>{t('today.pause')}</button>
+                  </>
+                ) : paused ? (
+                  <>
+                    <button className="btn primary grow" onClick={startRoundTimer}><Icon name="play" size={16} />{t('today.resumeTimer')}</button>
+                    <button className="btn soft" onClick={() => setSnoozeOpen(true)}><Icon name="moon" size={16} />{t('today.later')}</button>
+                    <button className="btn soft" onClick={() => stopRoundTimer(false)}>{t('today.stop')}</button>
                   </>
                 ) : (
                   <>
-                    <button className="btn primary grow" onClick={() => { act.startTimer(hh.block_minutes); if (snoozed) act.unsnooze(); setTimeUp(false); haptic() }}>
+                    <button className="btn primary grow" onClick={startRoundTimer}>
                       <Icon name="play" size={16} />{t('today.start', { min: hh.block_minutes })}</button>
                     {!snoozed && <button className="btn soft" onClick={() => setSnoozeOpen(true)}><Icon name="moon" size={18} />{t('today.later')}</button>}
                   </>
@@ -243,6 +348,40 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
         <Icon name="plus" size={20} />
       </button></div>
 
+      {d.solo && doneItems.length > 0 && (
+        <div className="card pad">
+          <div className="round-coach" style={{ margin: 0 }}>
+            <Bas cheer />
+            <span><b>Bas</b>{allDone ? t('today.basCreditDone', { name: me.name, min: timedMinutes > 0 ? timedMinutes : doneMin }) : t('today.basCredit1', { name: me.name })}</span>
+          </div>
+        </div>
+      )}
+
+      {!d.solo && mateDoneToday.length > 0 && (
+        <div className="group">
+          <h3 className="group-h">{t('today.creditsTitle')}</h3>
+          <div className="list">
+            {mateDoneToday.map((i) => {
+              const who = d.members.find((m) => m.user_id === i.done_by)
+              const taskName = title(i.task_id)
+              return (
+                <div key={i.id} className="row">
+                  {who ? <Avatar m={who} size={30} /> : <Ic name="clap" tone="gold" />}
+                  <span className="row-main">
+                    <span className="row-title">{t('today.creditsSub', { name: who?.name ?? '', task: taskName })}</span>
+                    <span className="row-sub">{i.minutes} {t('common.min')}<span className="sep" />+{xpItem(i)} XP</span>
+                  </span>
+                  <button className={i.kudos_at ? 'btn soft sm' : 'btn tinted sm'} disabled={!!i.kudos_at}
+                    onClick={() => { haptic([8, 40, 8]); sound('kudos'); act.kudos(i, taskName) }}>
+                    <Icon name="clap" size={15} />{i.kudos_at ? t('today.creditsSent') : t('today.creditsBtn')}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {d.others.length > 0 && (
         <div className="group">
           <h3 className="group-h">{t('today.housemates')}</h3>
@@ -259,6 +398,7 @@ export function Today({ goSettings, goProgress, onLog }: { goSettings: () => voi
 
       <SnoozeSheet open={snoozeOpen} onClose={() => setSnoozeOpen(false)} />
       <ItemMenu item={menu} onClose={() => setMenu(null)} />
+      <LearnRoutineSheet task={learnTask} onClose={() => { if (learnTask) markLearned(hh.id, learnTask.id); setLearnTask(null) }} />
       <Sheet open={levelUp !== null} onClose={() => setLevelUp(null)} title="">
         <div className="levelup">
           <Confetti />
@@ -355,6 +495,76 @@ function ItemMenu({ item, onClose }: { item: PlanItem | null; onClose: () => voi
                 </button>
               ))}</div></div>
           )}
+        </>
+      )}
+    </Sheet>
+  )
+}
+
+/** Bas vraagt na een afgevinkte taak wanneer je die normaal doet en onthoudt dat ritme voor het huishouden. */
+function LearnRoutineSheet({ task, onClose }: { task: Task | null; onClose: () => void }) {
+  const { d, act } = useApp()
+  const todayWd = weekday(localDate())
+  const daysLong = list('days.long')
+  const daysShort = list('days.short')
+  const [pickDays, setPickDays] = useState(false)
+  const [selectedDays, setSelectedDays] = useState<number[]>([todayWd])
+
+  useEffect(() => {
+    if (task) { setPickDays(false); setSelectedDays(task.weekdays.length ? task.weekdays : [todayWd]) }
+  }, [task, todayWd])
+
+  async function save(patch: Partial<Pick<Task, 'recurrence' | 'weekdays' | 'interval_days'>>) {
+    if (!task) return
+    markLearned(d.household.id, task.id)
+    await act.saveTask({
+      title: task.title, room: task.room, minutes: task.minutes, effort: task.effort,
+      assignee: task.assignee, due_date: task.due_date,
+      recurrence: patch.recurrence ?? task.recurrence,
+      weekdays: patch.weekdays ?? [],
+      interval_days: patch.interval_days ?? null,
+    }, task.id)
+    haptic(4); onClose()
+  }
+
+  return (
+    <Sheet open={!!task} onClose={onClose} title={t('learn.title')}>
+      {task && (
+        <>
+          <div className="round-coach" style={{ margin: 0 }}>
+            <Bas cheer />
+            <span><b>Bas</b>{t('learn.ask', { task: task.title })}</span>
+          </div>
+          {!pickDays ? (
+            <div className="list">
+              <button className="row" onClick={() => save({ recurrence: 'weekly', weekdays: [todayWd], interval_days: null })}>
+                <Ic name="calendar" /><span className="row-main"><span className="row-title">{t('learn.everyDay', { day: daysLong[todayWd] })}</span></span>
+                <span className="chev"><Icon name="chevron" size={16} /></span>
+              </button>
+              <button className="row" onClick={() => save({ recurrence: 'interval', weekdays: [], interval_days: 3 })}>
+                <Ic name="repeat" /><span className="row-main"><span className="row-title">{t('learn.everyFew')}</span></span>
+                <span className="chev"><Icon name="chevron" size={16} /></span>
+              </button>
+              <button className="row" onClick={() => save({ recurrence: 'interval', weekdays: [], interval_days: 7 })}>
+                <Ic name="clock" /><span className="row-main"><span className="row-title">{t('learn.weeklyFlex')}</span></span>
+                <span className="chev"><Icon name="chevron" size={16} /></span>
+              </button>
+              <button className="row" onClick={() => setPickDays(true)}>
+                <Ic name="list-check" tone="gold" /><span className="row-main"><span className="row-title">{t('learn.pickDays')}</span></span>
+                <span className="chev"><Icon name="chevron" size={16} /></span>
+              </button>
+            </div>
+          ) : (
+            <div className="group">
+              <Chips multi value={selectedDays} options={daysShort.map((l, v) => ({ v, label: l }))}
+                onChange={(v) => setSelectedDays((cur) => cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v].sort())} />
+              <button className="btn primary block" disabled={!selectedDays.length}
+                onClick={() => save({ recurrence: 'weekly', weekdays: selectedDays, interval_days: null })}>
+                {t('learn.save')}
+              </button>
+            </div>
+          )}
+          <button className="btn ghost block" onClick={onClose}>{t('learn.keep')}</button>
         </>
       )}
     </Sheet>

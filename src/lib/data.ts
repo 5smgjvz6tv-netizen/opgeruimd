@@ -214,7 +214,7 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       notify(item.done_by, tr('push.kudosT', { name: me.name }), tr('push.kudosB', { title }), 'kudos')
     },
     async startTimer(minutes: number) {
-      const end = new Date(Date.now() + minutes * 60_000)
+      const end = new Date(Date.now() + Math.round(minutes * 60_000))
       await patchMe({ timer_ends_at: end.toISOString() })
       await clearOutbox('timer')
       await notify(me.user_id, tr('push.timerT'), tr('push.timerB'), 'timer', end)
