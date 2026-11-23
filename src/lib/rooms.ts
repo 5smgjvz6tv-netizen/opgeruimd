@@ -1,22 +1,27 @@
+import { t, type TKey } from './i18n'
+
 export const ROOMS = [
-  { id: 'keuken', label: 'Keuken', icon: '🍳' },
-  { id: 'woonkamer', label: 'Woonkamer', icon: '🛋️' },
-  { id: 'badkamer', label: 'Badkamer', icon: '🛁' },
-  { id: 'slaapkamer', label: 'Slaapkamer', icon: '🛏️' },
-  { id: 'was', label: 'Was', icon: '🧺' },
-  { id: 'toilet', label: 'Toilet', icon: '🚽' },
-  { id: 'boven', label: 'Boven', icon: '⬆️' },
-  { id: 'beneden', label: 'Beneden', icon: '⬇️' },
-  { id: 'hal', label: 'Hal & trap', icon: '🚪' },
-  { id: 'werkkamer', label: 'Werkkamer', icon: '💻' },
-  { id: 'kinderkamer', label: 'Kinderkamer', icon: '🧸' },
-  { id: 'huisdier', label: 'Huisdier', icon: '🐾' },
-  { id: 'buiten', label: 'Tuin & balkon', icon: '🌿' },
-  { id: 'auto', label: 'Auto & fiets', icon: '🚲' },
-  { id: 'overig', label: 'Overig', icon: '✨' },
+  { id: 'keuken', label: 'Keuken', icon: 'keuken' },
+  { id: 'woonkamer', label: 'Woonkamer', icon: 'woonkamer' },
+  { id: 'badkamer', label: 'Badkamer', icon: 'badkamer' },
+  { id: 'slaapkamer', label: 'Slaapkamer', icon: 'slaapkamer' },
+  { id: 'was', label: 'Was', icon: 'was' },
+  { id: 'toilet', label: 'Toilet', icon: 'toilet' },
+  { id: 'boven', label: 'Boven', icon: 'boven' },
+  { id: 'beneden', label: 'Beneden', icon: 'beneden' },
+  { id: 'hal', label: 'Hal en trap', icon: 'hal' },
+  { id: 'werkkamer', label: 'Werkkamer', icon: 'werkkamer' },
+  { id: 'kinderkamer', label: 'Kinderkamer', icon: 'kinderkamer' },
+  { id: 'huisdier', label: 'Huisdier', icon: 'huisdier' },
+  { id: 'buiten', label: 'Tuin en balkon', icon: 'buiten' },
+  { id: 'auto', label: 'Auto en fiets', icon: 'auto' },
+  { id: 'overig', label: 'Overig', icon: 'overig' },
 ] as const
 
-export const room = (id: string | null) => ROOMS.find((r) => r.id === id) ?? ROOMS[ROOMS.length - 1]
+export const room = (id: string | null) => {
+  const r = ROOMS.find((x) => x.id === id) ?? ROOMS[ROOMS.length - 1]
+  return { ...r, label: t(`room.${r.id}` as TKey) }
+}
 
 // Slimme regels: raad ruimte en duur uit wat je typt.
 const RULES: [RegExp, string | null, number | null][] = [
@@ -39,14 +44,14 @@ export function guess(title: string) {
   return { room: r, minutes: m }
 }
 
-const DAY = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo']
 /** "ma & do" / "elke 2 dagen" / "eenmalig" */
-export function scheduleLabel(t: { recurrence: string; weekdays?: number[] | null; interval_days?: number | null }) {
-  if (t.recurrence === 'weekly') return (t.weekdays ?? []).map((d) => DAY[d]).join(' & ')
-  if (t.recurrence === 'interval') {
-    const n = t.interval_days ?? 7
-    const named: Record<number, string> = { 1: 'elke dag', 2: 'om de dag', 7: 'elke week', 14: 'om de week', 30: 'elke maand', 60: 'om de 2 maanden', 90: 'elk kwartaal', 120: 'om de 4 maanden' }
-    return named[n] ?? `elke ${n} dagen`
+export function scheduleLabel(x: { recurrence: string; weekdays?: number[] | null; interval_days?: number | null }) {
+  const days = t('days.short').split(',')
+  if (x.recurrence === 'weekly') return (x.weekdays ?? []).map((d) => days[d]).join(' · ')
+  if (x.recurrence === 'interval') {
+    const n = x.interval_days ?? 7
+    const named: Record<number, TKey> = { 1: 'freq.daily', 2: 'freq.2', 7: 'freq.weekly', 14: 'freq.biweekly', 30: 'freq.monthly', 60: 'freq.2months', 90: 'freq.quarter', 120: 'freq.4months' }
+    return named[n] ? t(named[n]) : t('freq.n', { n })
   }
-  return 'eenmalig'
+  return t('freq.once')
 }

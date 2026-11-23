@@ -1,221 +1,219 @@
 import { useState } from 'react'
 import { addDays, localDate } from '../../supabase/functions/_shared/planner'
-import { Avatar, DAYS } from '../components/Bits'
+import { Avatar, Ic, XpBar } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { useApp, type Member } from '../lib/data'
-import { room } from '../lib/rooms'
 import { haptic, sound } from '../lib/feel'
-import { badges, dayState, feed, roomScores, scores, streak, weekStart, type Score } from '../lib/stats'
+import { levelOf, weeklyChallenge, xpOf } from '../lib/game'
+import { list, locale, t } from '../lib/i18n'
+import { room } from '../lib/rooms'
+import { badges, dayState, feed, roomScores, scores, streak, weekStart } from '../lib/stats'
 
-export function Together({ onLog }: { onLog: () => void }) {
+export function Together() {
   const { d } = useApp()
-  const s = streak(d)
   const ws = weekStart()
-  const now = scores(d, ws, addDays(ws, 7))
-  const last = scores(d, addDays(ws, -7), ws)
+  const myXp = d.xp[d.me.user_id] ?? 0
+  const lv = levelOf(myXp)
+  const s = streak(d)
+  const ch = weeklyChallenge(d)
   const { rooms, total: house } = roomScores(d)
+  const myBadges = badges(d, d.me.user_id, lv.n)
+  const short = list('days.short')
 
   return (
-    <div className="screen">
-      <header className="large-title"><h1>Samen</h1></header>
-      {d.members.length < 2 && <Invite />}
-      <Scoreboard now={now} last={last} />
-      <Feed onLog={onLog} />
+    <div className="page">
+      <header className="hdr"><h1>{d.solo ? t('tab.progress') : t('tab.together')}</h1></header>
 
-      <section className="card">
-        <div className="stat-head">
-          <span className="big-emoji">🔥</span>
-          <div><h2>{s} {s === 1 ? 'dag' : 'dagen'} op rij</h2><p className="muted small">dat jullie je opruimronde afmaakten</p></div>
+      <div className="card level-card">
+        <span className="lv-badge" style={{ width: 52, height: 52, fontSize: 20 }}>{lv.n}</span>
+        <div className="grow">
+          <h2>{lv.title}</h2>
+          <p className="row-sub">{t('level', { n: lv.n })} · {myXp} XP</p>
+          <XpBar frac={lv.frac} />
+          <p className="row-sub" style={{ marginTop: 6 }}>{t('level.toNext', { xp: lv.next - myXp, n: lv.n + 1 })}</p>
         </div>
-        <div className="week">
-          {DAYS.map((l, i) => {
-            const st = dayState(d, addDays(ws, i))
-            return <div key={l} className={'wd ' + st}><span>{l}</span><i>{st === 'done' ? '✓' : st === 'rest' ? '🌿' : st === 'missed' ? '·' : ''}</i></div>
+      </div>
+
+      {d.solo ? <SoloWeek /> : <Scoreboard />}
+
+      <div className="group">
+        <h3 className="group-h">{t('prog.challenge')}</h3>
+        <div className="card challenge">
+          <Ic name={ch.icon} tone={ch.done ? 'gold' : undefined} lg />
+          <span className="row-main"><span className="row-title">{t(ch.title)}</span><span className="row-sub">{t(ch.sub)}</span><XpBar frac={ch.frac} /></span>
+          <span className="row-main" style={{ flex: 'none', alignItems: 'flex-end', gap: 4 }}>
+            <span className="tnum" style={{ fontWeight: 700 }}>{ch.have}/{ch.goal}</span>
+            {ch.done && <span className="xp-chip">{t('prog.challengeDone')}</span>}
+          </span>
+        </div>
+      </div>
+
+      <div className="group">
+        <h3 className="group-h">{t('prog.streak')}<span className="streak" style={{ textTransform: 'none' }}><Icon name="flame" size={16} />{s}</span></h3>
+        <div className="card week-dots">
+          {short.map((l, i) => {
+            const day = addDays(ws, i)
+            const st = dayState(d, day)
+            return <div key={l} className={'wd ' + st + (day === localDate() ? ' today' : '')}><span>{l}</span>
+              <i>{st === 'done' ? <Icon name="check" size={16} /> : st === 'rest' ? <Icon name="leaf" size={15} /> : st === 'partial' ? <Icon name="minus" size={14} /> : null}</i></div>
           })}
         </div>
-      </section>
+        <p className="group-f">{t('prog.streakSub')}</p>
+      </div>
 
-      <Badges />
-
-      <section className="card">
-        <div className="stat-head between">
-          <h2>Huis-meter</h2>
-          <span className={'pill ' + (house > 0.8 ? 'good' : house > 0.5 ? 'ok' : 'bad')}>{Math.round(house * 100)}%</span>
+      <div className="group">
+        <h3 className="group-h">{t('prog.badges')}<span>{myBadges.filter((b) => b.have >= b.need).length}/{myBadges.length}</span></h3>
+        <div className="list badges">
+          {myBadges.map((b) => {
+            const earned = b.have >= b.need
+            return (
+              <div key={b.title} className={'badge' + (earned ? ' earned' : '')}>
+                <span className="ic"><Icon name={b.icon} size={22} /></span>
+                <b>{t(b.title)}</b>
+                {earned ? <small>{t(b.text)}</small> : <><XpBar frac={b.have / b.need} /><small className="tnum">{b.have}/{b.need}</small></>}
+              </div>
+            )
+          })}
         </div>
-        <p className="muted small">Hoe goed alles bijgehouden is, per ruimte</p>
-        <ul className="meters">
-          {rooms.map((r) => (
-            <li key={r.id}>
-              <span className="meter-label">{r.icon} {r.label}</span>
-              <div className="meter"><i className={r.score > 0.8 ? 'good' : r.score > 0.5 ? 'ok' : 'bad'} style={{ width: `${Math.max(4, r.score * 100)}%` }} /></div>
-            </li>
-          ))}
-        </ul>
-      </section>
+      </div>
 
-      {d.members.length >= 2 && <Invite compact />}
+      <div className="group">
+        <h3 className="group-h">{t('prog.house')}<span>{Math.round(house * 100)}%</span></h3>
+        <div className="list">
+          {rooms.map((r) => (
+            <div key={r.id} className="row">
+              <Ic name={r.icon} tone={r.score > 0.8 ? undefined : r.score > 0.5 ? 'gold' : 'red'} />
+              <span className="row-main"><span className="row-title">{room(r.id).label}</span></span>
+              <span className="row-val">{Math.round(r.score * 100)}%</span>
+              <div className="meter"><i className={r.score > 0.8 ? 'good' : r.score > 0.5 ? 'ok' : 'bad'} style={{ width: `${Math.max(4, r.score * 100)}%` }} /></div>
+            </div>
+          ))}
+        </div>
+        <p className="group-f">{t('prog.houseSub')}</p>
+      </div>
+
+      <Activity />
+      {!d.solo && <Invite />}
     </div>
   )
 }
 
-/** 🏆 Wie doet deze week het meest? Punten = minuten × zwaarte. */
-function Scoreboard({ now, last }: { now: Record<string, Score>; last: Record<string, Score> }) {
+function Scoreboard() {
   const { d } = useApp()
-  const [info, setInfo] = useState(false)
-  const ms = d.members
-  const lead = leader(ms, now)
-  const lastLead = leader(ms, last)
-  const total = ms.reduce((a, m) => a + now[m.user_id].pts, 0)
-  const name = (m: Member) => (m.user_id === d.me.user_id ? 'Jij' : m.name)
-
+  const ws = weekStart()
+  const now = scores(d, ws, addDays(ws, 7))
+  const last = scores(d, addDays(ws, -7), ws)
+  const ranked = [...d.members].sort((a, b) => now[b.user_id].pts - now[a.user_id].pts)
+  const max = Math.max(1, ...ranked.map((m) => now[m.user_id].pts))
+  const lead = ranked.length > 1 && now[ranked[0].user_id].pts > now[ranked[1].user_id].pts ? ranked[0] : null
+  const gap = lead ? now[ranked[0].user_id].pts - now[ranked[1].user_id].pts : 0
+  const lastRank = [...d.members].sort((a, b) => last[b.user_id].pts - last[a.user_id].pts)
+  const lastWin = lastRank.length > 1 && last[lastRank[0].user_id].pts > last[lastRank[1].user_id].pts ? lastRank[0] : null
+  const name = (m: Member) => (m.user_id === d.me.user_id ? t('common.you') : m.name)
   return (
-    <section className="card score">
-      <div className="stat-head between">
-        <h2>🏆 Deze week</h2>
-        <button className="icon-btn" onClick={() => setInfo((x) => !x)} aria-label="Hoe werken punten?" aria-expanded={info}><Icon name="info" size={20} /></button>
-      </div>
-      {info && <p className="muted small fade-in points-info">Punten = minuten × zwaarte. 🪶 Licht telt ×0,75, normaal ×1 en 💪 zwaar ×1,5. Samen gedaan telt voor allebei.</p>}
-      <div className={'players n' + ms.length}>
-        {ms.map((m) => (
-          <div key={m.user_id} className={'player' + (lead?.user_id === m.user_id ? ' lead' : '')}>
-            <div className="player-av">
-              {lead?.user_id === m.user_id && <span className="crown">👑</span>}
-              <Avatar m={m} size={52} />
-            </div>
-            <b className="player-name">{name(m)}</b>
-            <span className="player-pts"><CountUp value={now[m.user_id].pts} /><small> pt</small></span>
-            <span className="muted small">{fmtMin(now[m.user_id].min)} · {now[m.user_id].count} {now[m.user_id].count === 1 ? 'klus' : 'klussen'}</span>
+    <div className="group">
+      <h3 className="group-h">{t('prog.week')}</h3>
+      <div className="list">
+        {ranked.map((m) => (
+          <div key={m.user_id} className="player" style={{ '--c': m.color } as React.CSSProperties}>
+            <Avatar m={m} size={34} />
+            <span className="row-main">
+              <span className="row-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{name(m)}{lead?.user_id === m.user_id && <span className="crown"><Icon name="crown" size={16} /></span>}
+                <span className="tag gray">{t('level.short', { n: levelOf(d.xp[m.user_id] ?? 0).n })}</span></span>
+              <XpBar frac={now[m.user_id].pts / max} color={m.color} />
+              <span className="row-sub">{now[m.user_id].min} {t('common.min')}<span className="sep" />{t('prog.tasksN', { n: now[m.user_id].count })}</span>
+            </span>
+            <span className="player-score">{now[m.user_id].pts} <small className="muted">XP</small></span>
           </div>
         ))}
       </div>
-      {total > 0 && ms.length > 1 && (
-        <div className="fair-bar">{ms.map((m) => <i key={m.user_id} style={{ flex: now[m.user_id].pts, background: m.color }} />)}</div>
-      )}
-      <p className="score-line">
-        {!total ? 'Nog niks gedaan deze week. Wie zet de eerste punten neer?'
-          : ms.length < 2 ? 'Nodig je huisgenoot uit om het samen te doen.'
-          : lead ? <>{lead.user_id === d.me.user_id ? 'Jij staat' : `${lead.name} staat`} <b>{gap(ms, now)} punten</b> voor 💪</>
-          : 'Gelijkspel! 🤝'}
+      <p className="group-f">
+        {!ranked.some((m) => now[m.user_id].pts) ? t('prog.noneYet') : lead ? (lead.user_id === d.me.user_id ? t('prog.leadYou', { n: gap }) : t('prog.lead', { name: lead.name, n: gap })) : t('prog.tie')}
+        {lastWin && <> · {lastWin.user_id === d.me.user_id ? t('prog.lastWeekYou') : t('prog.lastWeek', { name: lastWin.name })}</>}
+        <br />{t('prog.pointsInfo')}
       </p>
-      {lastLead && ms.length > 1 && <p className="muted small center">Vorige week won <b>{lastLead.user_id === d.me.user_id ? 'jij' : lastLead.name}</b> 🏆 ({ms.map((m) => last[m.user_id].pts).join(' – ')})</p>}
-    </section>
+    </div>
   )
 }
 
-const leader = (ms: Member[], sc: Record<string, Score>) => {
-  if (ms.length < 1) return null
-  const sorted = [...ms].sort((a, b) => sc[b.user_id].pts - sc[a.user_id].pts)
-  if (!sc[sorted[0].user_id].pts || (sorted[1] && sc[sorted[0].user_id].pts === sc[sorted[1].user_id].pts)) return null
-  return sorted[0]
+function SoloWeek() {
+  const { d } = useApp()
+  const ws = weekStart()
+  const id = d.me.user_id
+  const now = scores(d, ws, addDays(ws, 7))[id]
+  const last = scores(d, addDays(ws, -7), ws)[id]
+  const best = Math.max(now.pts, ...Array.from({ length: 8 }, (_, i) => scores(d, addDays(ws, -7 * (i + 1)), addDays(ws, -7 * i))[id].pts))
+  const diff = now.pts - last.pts
+  return (
+    <div className="group">
+      <h3 className="group-h">{t('prog.weekSolo')}</h3>
+      <div className="list">
+        <div className="row"><Ic name="star" tone="gold" /><span className="row-main"><span className="row-title">{now.pts} XP</span>
+          <span className="row-sub">{t('prog.vsLast', { diff: (diff >= 0 ? '+' : '') + diff })}</span></span></div>
+        <div className="row"><Ic name="clock" /><span className="row-main"><span className="row-title">{now.min} {t('common.min')}</span>
+          <span className="row-sub">{t('prog.tasksN', { n: now.count })}</span></span></div>
+        <div className="row"><Ic name="trophy" tone="gold" /><span className="row-main"><span className="row-title">{t('prog.best', { xp: best })}</span></span></div>
+      </div>
+      <p className="group-f">{t('prog.pointsInfo')}</p>
+    </div>
+  )
 }
-const gap = (ms: Member[], sc: Record<string, Score>) => {
-  const p = ms.map((m) => sc[m.user_id].pts).sort((a, b) => b - a)
-  return p[0] - (p[1] ?? 0)
-}
-const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}u ${m % 60 ? `${m % 60}m` : ''}`.trim() : `${m} min`)
 
-function CountUp({ value }: { value: number }) {
-  return <span className="count" key={value}>{value}</span>
-}
-
-/** 📋 Wie deed wat: tijdlijn van deze week, met 👏 high fives. */
-function Feed({ onLog }: { onLog: () => void }) {
+function Activity() {
   const { d, act } = useApp()
   const [all, setAll] = useState(false)
   const items = feed(d)
   const shown = all ? items : items.slice(0, 8)
   const member = (id: string | null) => d.members.find((m) => m.user_id === id)
-  const groups: { day: string; list: typeof items }[] = []
-  for (const i of shown) {
-    const day = localDate(i.done_at!)
-    const g = groups.find((x) => x.day === day)
-    g ? g.list.push(i) : groups.push({ day, list: [i] })
-  }
-
   return (
-    <section className="card">
-      <div className="stat-head between">
-        <h2>📋 Wie deed wat</h2>
-        <button className="btn soft small" onClick={onLog}><Icon name="check" size={16} /> Al gedaan</button>
-      </div>
-      {!items.length && <p className="muted">Hier zie je alles wat jullie deze week doen, ook wat je zelf logt.</p>}
-      {groups.map((g) => (
-        <div key={g.day} className="feed-day">
-          <p className="label">{g.day === localDate() ? 'Vandaag' : g.day === addDays(localDate(), -1) ? 'Gisteren' : new Date(g.day + 'T12:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'short' })}</p>
-          <ul className="feed">
-            {g.list.map((i) => {
-              const t = d.tasks.find((x) => x.id === i.task_id)
-              const who = member(i.done_by)
-              const mine = i.done_by === d.me.user_id
-              const title = t?.title ?? 'Taak'
-              return (
-                <li key={i.id} className="feed-item">
-                  {who && <Avatar m={who} size={34} />}
-                  <span className="grow">
-                    <b>{title}</b>
-                    <span className="muted small feed-meta">
-                      {mine ? 'Jij' : who?.name} · {room(t?.room ?? null).icon} {i.minutes} min
-                      {t?.effort === 3 && ' · 💪'}{i.helper && ` · 👫 met ${i.helper === d.me.user_id ? 'jou' : member(i.helper)?.name}`}
-                      {i.extra && ' · 🙌 extra'} · {new Date(i.done_at!).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </span>
-                  {!mine ? (
-                    <button className={'kudos' + (i.kudos_at ? ' given' : '')} onClick={() => { haptic([8, 40, 8]); sound('kudos'); act.kudos(i, title) }} disabled={!!i.kudos_at}
-                      aria-label={i.kudos_at ? 'High five gegeven' : `Geef ${who?.name} een high five`}>
-                      👏{i.kudos_at && <span className="kudos-burst" />}
-                    </button>
-                  ) : i.kudos_at ? <span className="kudos-got" title="High five gekregen">👏</span> : null}
-                </li>
-              )
-            })}
-          </ul>
+    <div className="group">
+      <h3 className="group-h">{t('prog.log')}</h3>
+      {!items.length ? <p className="group-f">{t('prog.logEmpty')}</p> : (
+        <div className="list">
+          {shown.map((i) => {
+            const task = d.tasks.find((x) => x.id === i.task_id)
+            const who = member(i.done_by)
+            const mine = i.done_by === d.me.user_id
+            const when = new Date(i.done_at!)
+            const day = localDate(when) === localDate() ? t('common.today') : when.toLocaleDateString(locale(), { weekday: 'short' })
+            return (
+              <div key={i.id} className="row">
+                {who ? <Avatar m={who} size={30} /> : <Ic name="check" />}
+                <span className="row-main">
+                  <span className="row-title">{task?.title ?? '—'}</span>
+                  <span className="row-sub">{!d.solo && <>{mine ? t('common.you') : who?.name}<span className="sep" /></>}
+                    {day} {when.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}<span className="sep" />{i.minutes} {t('common.min')}
+                    {i.helper && <><span className="sep" />{t('prog.with', { name: i.helper === d.me.user_id ? t('common.you').toLowerCase() : member(i.helper)?.name ?? '' })}</>}
+                    {i.extra && <><span className="sep" />{t('prog.extra')}</>}</span>
+                </span>
+                <span className="xp-chip">+{xpOf(i.minutes, task?.effort)}</span>
+                {!mine && !d.solo && (
+                  <button className={'kudos' + (i.kudos_at ? ' given' : '')} disabled={!!i.kudos_at} aria-label={t(i.kudos_at ? 'prog.kudosGiven' : 'prog.kudos')}
+                    onClick={() => { haptic([8, 40, 8]); sound('kudos'); act.kudos(i, task?.title ?? '') }}><Icon name="clap" size={18} /></button>
+                )}
+                {mine && i.kudos_at && <span className="kudos given" aria-label={t('prog.kudosGiven')}><Icon name="clap" size={18} /></span>}
+              </div>
+            )
+          })}
         </div>
-      ))}
-      {items.length > 8 && <button className="link" onClick={() => setAll((x) => !x)}>{all ? 'Minder tonen' : `Alles tonen (${items.length})`}</button>}
-    </section>
+      )}
+      {items.length > 8 && <button className="btn ghost sm" onClick={() => setAll((x) => !x)}>{all ? t('prog.showLess') : t('prog.showAll', { n: items.length })}</button>}
+    </div>
   )
 }
 
-function Badges() {
-  const { d } = useApp()
-  const list = badges(d, d.me.user_id)
-  const got = list.filter((b) => b.have >= b.need).length
-  return (
-    <section className="card">
-      <div className="stat-head between"><h2>🏅 Jouw badges</h2><span className="pill good">{got}/{list.length}</span></div>
-      <ul className="badges">
-        {list.map((b) => {
-          const earned = b.have >= b.need
-          return (
-            <li key={b.title} className={'badge' + (earned ? ' earned' : '')} title={b.text}>
-              <span className="badge-ic">{b.icon}</span>
-              <b>{b.title}</b>
-              <span className="muted small">{b.text}</span>
-              {!earned && <span className="badge-bar"><i style={{ width: `${(b.have / b.need) * 100}%` }} /></span>}
-              {!earned && <span className="muted small">{b.have}/{b.need}</span>}
-            </li>
-          )
-        })}
-      </ul>
-    </section>
-  )
-}
-
-export function Invite({ compact }: { compact?: boolean }) {
+export function Invite() {
   const { d } = useApp()
   const code = d.household.invite_code
-  const url = location.origin + location.pathname
   const share = () => navigator.share
-    ? navigator.share({ title: 'Opgeruimd', text: `Doe je mee met ons huishouden in Opgeruimd? Code: ${code}`, url }).catch(() => {})
+    ? navigator.share({ title: 'Opgeruimd', text: `${t('prog.inviteSub')} ${code}`, url: location.origin + location.pathname }).catch(() => {})
     : navigator.clipboard.writeText(code)
   return (
-    <section className={'card invite' + (compact ? ' compact' : '')}>
-      {!compact && <><h2>Nodig je huisgenoot uit</h2><p className="muted">Laat hem of haar de app openen, een account maken en deze code invullen:</p></>}
-      <div className="code-row">
-        <span className="code">{code}</span>
-        <button className="btn soft" onClick={share}><Icon name="share" size={18} /> Delen</button>
-      </div>
-      {compact && <p className="muted small">Uitnodigingscode van jullie huishouden</p>}
-    </section>
+    <div className="group">
+      <h3 className="group-h">{t('prog.invite')}</h3>
+      <div className="list"><div className="code-row"><span className="code">{code}</span>
+        <button className="btn tinted sm" onClick={share}><Icon name="share" size={16} />{t('common.share')}</button></div></div>
+      <p className="group-f">{t('prog.inviteSub')}</p>
+    </div>
   )
 }

@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   if (m.reminded_on === today && !m.snooze_on_arrive) return json({ ok: true, sent: false, reason: 'already reminded' })
 
   await ensurePlan(db, m.household_id, today)
-  const msg = await reminder(m, today, m.snooze_on_arrive ? `Weer thuis, ${m.name}!` : `Welkom thuis, ${m.name}! 🏡`)
+  const msg = await reminder(m, today, m.snooze_on_arrive ? 'back' : 'arrive')
   await db.from('members').update({
     reminded_on: today, snooze_on_arrive: false, snooze_until: null, snooze_reason: null,
   }).eq('user_id', m.user_id)

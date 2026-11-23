@@ -24,9 +24,16 @@ const P: Record<string, string> = {
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   calendar: 'M8 3v4M16 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1',
 }
-export function Icon({ name, size = 22, fill = false }: { name: keyof typeof P | string; size?: number; fill?: boolean }) {
+// Eigen icoonset (glyphs.ts, duotone). Zolang een naam daar ontbreekt, valt hij terug op de lijntjes hierboven.
+const GLYPHS: Record<string, string> =
+  (Object.values(import.meta.glob('./glyphs.ts', { eager: true }))[0] as { GLYPHS?: Record<string, string> } | undefined)?.GLYPHS ?? {}
+
+export function Icon({ name, size = 22, fill = false, className }: { name: string; size?: number; fill?: boolean; className?: string }) {
+  const g = GLYPHS[name]
+  if (g) return <svg className={'glyph ' + (className ?? '')} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: g }} />
+  if (!P[name]) return null
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill={fill ? 'currentColor' : 'none'}
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill={fill ? 'currentColor' : 'none'}
       stroke="currentColor" strokeWidth={fill ? 0 : 2} strokeLinecap="round" strokeLinejoin="round">
       <path d={P[name]} />
     </svg>

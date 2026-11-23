@@ -1,6 +1,7 @@
 import { addDays, daysBetween, dueSince, localDate, points, weekday } from '../../supabase/functions/_shared/planner'
 import type { Data } from './data'
 import { ROOMS } from './rooms'
+import type { TKey } from './i18n'
 
 export type DayState = 'done' | 'partial' | 'missed' | 'rest' | 'empty' | 'future'
 
@@ -100,22 +101,25 @@ export function feed(d: Data, from = weekStart()) {
     .sort((a, b) => b.done_at!.localeCompare(a.done_at!))
 }
 
-export type Badge = { icon: string; title: string; text: string; have: number; need: number }
-/** Persoonlijke badges (laatste 60 dagen). */
-export function badges(d: Data, userId: string): Badge[] {
+export type Badge = { icon: string; title: TKey; text: TKey; have: number; need: number }
+/** Persoonlijke badges (laatste 60 dagen + niveau). */
+export function badges(d: Data, userId: string, level = 1): Badge[] {
   const mine = d.items.filter((i) => i.status === 'done' && (i.done_by === userId || i.helper === userId))
   const task = (id: string) => d.tasks.find((t) => t.id === id)
   const weekAgo = addDays(localDate(), -6)
   const daysThisWeek = new Set(mine.filter((i) => localDate(i.done_at!) >= weekAgo).map((i) => localDate(i.done_at!))).size
   const weekMin = mine.filter((i) => localDate(i.done_at!) >= weekStart()).reduce((s, i) => s + i.minutes, 0)
-  return [
-    { icon: '🧹', title: 'Eerste ronde', text: 'Je eerste klus afgevinkt', have: Math.min(mine.length, 1), need: 1 },
-    { icon: '🔥', title: 'Week vol', text: '7 dagen op rij iets gedaan', have: daysThisWeek, need: 7 },
-    { icon: '💪', title: 'Zware klusser', text: '5 zware taken gedaan', have: mine.filter((i) => task(i.task_id)?.effort === 3).length, need: 5 },
-    { icon: '🧺', title: 'Wasmeester', text: '10 keer de was gedaan', have: mine.filter((i) => task(i.task_id)?.room === 'was').length, need: 10 },
-    { icon: '🙌', title: 'Uit jezelf', text: '5 extraatjes of zelf gelogd', have: mine.filter((i) => i.extra && i.done_by === userId).length, need: 5 },
-    { icon: '👫', title: 'Teamplayer', text: '5 klussen samen gedaan', have: mine.filter((i) => i.helper).length, need: 5 },
-    { icon: '⏱️', title: 'Uurtje', text: 'Een uur huishouden in één week', have: weekMin, need: 60 },
-    { icon: '👏', title: 'Gewaardeerd', text: '5 high fives gekregen', have: mine.filter((i) => i.kudos_at && i.done_by === userId).length, need: 5 },
-  ].map((b) => ({ ...b, have: Math.min(b.have, b.need) }))
+  const list: Badge[] = [
+    { icon: 'check-circle', title: 'b.first', text: 'b.firstSub', have: Math.min(mine.length, 1), need: 1 },
+    { icon: 'flame', title: 'b.week', text: 'b.weekSub', have: daysThisWeek, need: 7 },
+    { icon: 'muscle', title: 'b.heavy', text: 'b.heavySub', have: mine.filter((i) => task(i.task_id)?.effort === 3).length, need: 5 },
+    { icon: 'was', title: 'b.laundry', text: 'b.laundrySub', have: mine.filter((i) => task(i.task_id)?.room === 'was').length, need: 10 },
+    { icon: 'star', title: 'b.self', text: 'b.selfSub', have: mine.filter((i) => i.extra && i.done_by === userId).length, need: 5 },
+    { icon: 'hourglass', title: 'b.hour', text: 'b.hourSub', have: weekMin, need: 60 },
+    { icon: 'crown', title: 'b.level5', text: 'b.level5Sub', have: level, need: 5 },
+  ]
+  if (d.others.length) list.splice(5, 0,
+    { icon: 'duo', title: 'b.team', text: 'b.teamSub', have: mine.filter((i) => i.helper).length, need: 5 },
+    { icon: 'clap', title: 'b.kudos', text: 'b.kudosSub', have: mine.filter((i) => i.kudos_at && i.done_by === userId).length, need: 5 })
+  return list.map((b) => ({ ...b, have: Math.min(b.have, b.need) }))
 }

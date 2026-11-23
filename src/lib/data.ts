@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { SUPABASE_KEY, SUPABASE_URL } from '../config'
 import { addDays, ensurePlan, fillPlan, localDate, type PlanItem, type Task } from '../../supabase/functions/_shared/planner'
 import { flush } from './push'
+import { lang, t as tr } from './i18n'
 import { guess } from './rooms'
 import { catalogRow, type CatalogTask } from './catalog'
 
@@ -23,8 +24,8 @@ export type Member = {
   notify: Record<string, boolean>
   onboarded_at: string | null
 }
-export type Household = { id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[]; rooms: string[] | null }
-export type Data = { me: Member; partner: Member | null; members: Member[]; household: Household; tasks: Task[]; items: PlanItem[] }
+export type Household = { id: string; name: string; invite_code: string; block_minutes: number; rest_days: number[]; rooms: string[] | null; size: number }
+export type Data = { me: Member; partner: Member | null; others: Member[]; solo: boolean; members: Member[]; household: Household; tasks: Task[]; items: PlanItem[]; xp: Record<string, number> }
 export type TaskInput = Pick<Task, 'title' | 'room' | 'minutes' | 'recurrence' | 'weekdays' | 'interval_days' | 'assignee' | 'due_date' | 'effort'>
 
 /** Laadt alles van het huishouden en blijft live in sync met de andere telefoon. */
@@ -40,21 +41,30 @@ export function useHousehold(userId: string) {
       await ensurePlan(sb, me.household_id, localDate())
     }
     const h = me.household_id
-    const [hh, members, tasks, items] = await Promise.all([
+    const [hh, members, tasks, items, xpRows] = await Promise.all([
       sb.from('households').select('*').eq('id', h).single(),
       sb.from('members').select('*').eq('household_id', h).order('created_at'),
       sb.from('tasks').select('*').eq('household_id', h).order('created_at'),
       sb.from('plan_items').select('*').eq('household_id', h).gte('date', addDays(localDate(), -60)),
+      sb.rpc('household_xp'),
     ])
+    const xp: Record<string, number> = {}
+    for (const r of (xpRows.data ?? []) as { user_id: string; xp: number }[]) xp[r.user_id] = Number(r.xp)
     const all = (members.data ?? []) as Member[]
     setData({
       me: all.find((m) => m.user_id === userId) ?? me,
       partner: all.find((m) => m.user_id !== userId) ?? null,
+      others: all.filter((m) => m.user_id !== userId),
+      // Alleen wonen: geen huisgenoten-functies (tenzij er toch iemand is meegedaan).
+      solo: (hh.data?.size ?? 2) === 1 && all.length <= 1,
       members: all,
       household: hh.data,
       tasks: tasks.data ?? [],
       items: items.data ?? [],
+      xp,
     })
+    // Taal bewaren voor meldingen van de server.
+    if ((me as { lang?: string }).lang !== lang) sb.from('members').update({ lang }).eq('user_id', userId).then(() => {})
   }, [userId])
 
   useEffect(() => {
@@ -83,7 +93,8 @@ export function useHousehold(userId: string) {
 
 // ——— Acties ———
 export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reload: () => void) {
-  const { me, partner, household: hh } = d
+  const { me, others, household: hh } = d
+  const notifyOthers = (title: string, body: string, tag: string) => others.forEach((o) => notify(o.user_id, title, body, tag))
   const today = localDate()
   const notify = async (userId: string, title: string, body: string, tag: string, sendAt?: Date) => {
     await sb.from('outbox').insert({ household_id: hh.id, user_id: userId, title, body, tag, send_at: (sendAt ?? new Date()).toISOString() })
@@ -104,8 +115,8 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
         : i) }))
       await sb.rpc('toggle_item', { item: item.id, done })
       const rest = mine().filter((i) => i.id !== item.id && i.status !== 'done')
-      if (done && item.user_id === me.user_id && !rest.length && partner) {
-        notify(partner.user_id, `${me.name} is klaar voor vandaag 💪`, 'Alle taakjes zijn afgevinkt.', 'done')
+      if (done && item.user_id === me.user_id && !rest.length && others.length) {
+        notifyOthers(tr('push.doneT', { name: me.name }), tr('push.doneB'), 'done')
       }
       reload()
     },
@@ -115,8 +126,8 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       } else {
         const { data: t } = await sb.from('tasks').insert({ ...input, household_id: hh.id }).select().single()
         if (t) await fillPlan(sb, hh.id, today, [t.id])
-        if (t && partner && input.assignee !== me.user_id) {
-          notify(partner.user_id, `${me.name} heeft een taak toegevoegd`, `${t.title} (±${t.minutes} min). Ik plan hem slim in.`, 'task')
+        if (t && others.length && input.assignee !== me.user_id) {
+          notifyOthers(tr('push.taskT', { name: me.name }), tr('push.taskB', { title: t.title, min: t.minutes }), 'task')
         }
       }
       reload()
@@ -141,10 +152,9 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       await sb.from('plan_items').delete().eq('id', item.id)
       reload()
     },
-    /** Samen gedaan: telt voor allebei in de eerlijke verdeling. */
-    async together(item: PlanItem, on: boolean) {
-      if (!partner) return
-      const helper = on ? (item.done_by === partner.user_id ? me.user_id : partner.user_id) : null
+    /** Samen gedaan: telt voor allebei in de eerlijke verdeling. helperId = met wie (null = toch niet samen). */
+    async together(item: PlanItem, helperId: string | null) {
+      const helper = helperId && helperId === item.done_by ? me.user_id : helperId
       setData((x) => ({ ...x, items: x.items.map((i) => (i.id === item.id ? { ...i, helper } : i)) }))
       await sb.from('plan_items').update({ helper }).eq('id', item.id)
     },
@@ -165,22 +175,22 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       return data
     },
     /** "Al gedaan": telt mee, vinkt af als hij die dag gepland stond, en schuift de volgende keer op. */
-    async logDone(task: Task, at: Date, together: boolean, minutes?: number) {
-      await sb.rpc('log_done', { task: task.id, at: at.toISOString(), together, minutes: minutes ?? null })
+    async logDone(task: Task, at: Date, withUser: string | null, minutes?: number) {
+      await sb.rpc('log_done', { task: task.id, at: at.toISOString(), with_user: withUser, minutes: minutes ?? null })
       reload()
     },
-    /** 👏 High five voor een klus van je huisgenoot. */
+    /** High five voor een klus van je huisgenoot. */
     async kudos(item: PlanItem, title: string) {
       if (item.kudos_at || !item.done_by || item.done_by === me.user_id) return
       setData((x) => ({ ...x, items: x.items.map((i) => (i.id === item.id ? { ...i, kudos_at: new Date().toISOString() } : i)) }))
       await sb.from('plan_items').update({ kudos_at: new Date().toISOString() }).eq('id', item.id)
-      notify(item.done_by, `👏 ${me.name} geeft je een high five!`, `Voor: ${title}. Lekker bezig!`, 'kudos')
+      notify(item.done_by, tr('push.kudosT', { name: me.name }), tr('push.kudosB', { title }), 'kudos')
     },
     async startTimer(minutes: number) {
       const end = new Date(Date.now() + minutes * 60_000)
       await patchMe({ timer_ends_at: end.toISOString() })
       await clearOutbox('timer')
-      await notify(me.user_id, 'Tijd is om! ⏰', 'Je opruimronde zit erop. Goed bezig! Vink af wat je gedaan hebt.', 'timer', end)
+      await notify(me.user_id, tr('push.timerT'), tr('push.timerB'), 'timer', end)
     },
     async stopTimer() {
       await patchMe({ timer_ends_at: null })
@@ -195,21 +205,20 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       const at = new Date(Date.now() + (when === 'arrive' ? 3 : when) * 3600_000)
       await patchMe({ snooze_reason: reason, snooze_on_arrive: when === 'arrive', snooze_until: when === 'arrive' ? null : at.toISOString() })
       // Ook bij "als ik thuiskom" na 3 uur een reserve-herinnering, voor als het thuiskom-signaal niet komt.
-      await notify(me.user_id, 'Tijd voor je opruimronde? 🙂', '', 'snooze', at)
+      await notify(me.user_id, tr('push.snoozeT'), '', 'snooze', at)
     },
     async unsnooze() {
       await clearOutbox('snooze')
       await patchMe({ snooze_reason: null, snooze_on_arrive: false, snooze_until: null })
     },
-    async askSwap(item: PlanItem, title: string) {
-      if (!partner) return
-      await sb.from('plan_items').update({ swap_to: partner.user_id }).eq('id', item.id)
-      notify(partner.user_id, `${me.name} vraagt of jij iets kunt overnemen`, `${title} (±${item.minutes} min). Open de app om ja of nee te zeggen.`, 'swap')
+    async askSwap(item: PlanItem, title: string, toId: string) {
+      await sb.from('plan_items').update({ swap_to: toId }).eq('id', item.id)
+      notify(toId, tr('push.swapT', { name: me.name }), tr('push.swapB', { title, min: item.minutes }), 'swap')
       reload()
     },
     async answerSwap(item: PlanItem, title: string, yes: boolean) {
       await sb.from('plan_items').update(yes ? { swap_to: null, user_id: me.user_id } : { swap_to: null }).eq('id', item.id)
-      notify(item.user_id, yes ? `${me.name} neemt het over 👍` : `${me.name} kan het nu niet`, yes ? `${title} staat nu bij ${me.name}.` : `${title} blijft bij jou.`, 'swap')
+      notify(item.user_id, tr(yes ? 'push.yesT' : 'push.noT', { name: me.name }), tr(yes ? 'push.yesB' : 'push.noB', { title, name: me.name }), 'swap')
       reload()
     },
     patchMe,
@@ -218,7 +227,7 @@ export function actions(d: Data, setData: (fn: (d: Data) => Data) => void, reloa
       setData((x) => ({ ...x, household: { ...x.household, ...fields } }))
       await sb.from('households').update(fields).eq('id', hh.id)
     },
-    testPush: () => notify(me.user_id, 'Het werkt! 🎉', 'Zo zien je herinneringen eruit.', 'test'),
+    testPush: () => notify(me.user_id, tr('push.testT'), tr('push.testB'), 'test'),
   }
 }
 export type Actions = ReturnType<typeof actions>

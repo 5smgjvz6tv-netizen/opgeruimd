@@ -40,17 +40,22 @@ export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
 
 /** Herinnering met je takenlijstje van vandaag, of null als er niks openstaat. */
-export async function reminder(m: { user_id: string; name: string }, date: string, title: string) {
+export async function reminder(m: { user_id: string; name: string; lang?: string }, date: string, kind: 'arrive' | 'back' | 'time' | 'snooze') {
   const { data } = await db.from('plan_items').select('minutes, tasks(title)')
     .eq('user_id', m.user_id).eq('date', date).eq('status', 'todo')
   if (!data?.length) return null
+  const en = m.lang === 'en'
   const min = data.reduce((s, r) => s + r.minutes, 0)
   // deno-lint-ignore no-explicit-any
   const names = data.map((r: any) => r.tasks?.title).filter(Boolean)
   const list = names.slice(0, 3).join(', ') + (names.length > 3 ? ` +${names.length - 3}` : '')
-  return {
-    title,
-    body: `${data.length} ${data.length === 1 ? 'taakje' : 'taakjes'} · ±${min} min: ${list}. Even doen, dan ben je klaar!`,
-    tag: 'reminder',
-  }
+  const title = {
+    arrive: en ? `Welcome home, ${m.name}` : `Welkom thuis, ${m.name}`,
+    back: en ? `Back home, ${m.name}` : `Weer thuis, ${m.name}`,
+    time: en ? `Time for your tidy-up round, ${m.name}` : `Tijd voor je opruimronde, ${m.name}`,
+    snooze: en ? 'Time for your tidy-up round?' : 'Tijd voor je opruimronde?',
+  }[kind]
+  const n = data.length
+  const body = en ? `${n} ${n === 1 ? 'task' : 'tasks'} · ±${min} min: ${list}.` : `${n} ${n === 1 ? 'taak' : 'taken'} · ±${min} min: ${list}.`
+  return { title, body, tag: 'reminder' }
 }

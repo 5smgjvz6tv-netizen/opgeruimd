@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useApp, type Task, type TaskInput } from '../lib/data'
-import { guess, ROOMS } from '../lib/rooms'
-import { Chips, DAYS } from './Bits'
-import { CatalogPicker } from './CatalogPicker'
 import { CATALOG, type CatalogTask } from '../lib/catalog'
+import { useApp, type Task, type TaskInput } from '../lib/data'
+import { xpOf } from '../lib/game'
+import { list, plural, t } from '../lib/i18n'
+import { guess, room, ROOMS } from '../lib/rooms'
+import { Chips, Segmented } from './Bits'
+import { CatalogPicker } from './CatalogPicker'
 import { Sheet } from './Sheet'
 
 const blank = (): TaskInput => ({ title: '', room: null, minutes: 10, recurrence: 'once', weekdays: [], interval_days: 7, assignee: null, due_date: null, effort: 2 })
@@ -13,22 +15,15 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
   const [f, setF] = useState<TaskInput>(blank)
   const [touched, setTouched] = useState({ room: false, minutes: false })
   const [busy, setBusy] = useState(false)
-  const [mode, setMode] = useState<'list' | 'own'>('list')
+  const [mode, setMode] = useState<'lib' | 'own'>('lib')
   const [sel, setSel] = useState<Set<string>>(new Set())
-  const existing = new Set(d.tasks.filter((t) => !t.archived && t.catalog_id).map((t) => t.catalog_id!))
-  const toggle = (t: CatalogTask) => setSel((s) => { const n = new Set(s); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
-  async function addSelected() {
-    setBusy(true)
-    await act.addCatalog(CATALOG.flatMap((r) => r.tasks).filter((t) => sel.has(t.id) && !existing.has(t.id)))
-    setBusy(false)
-    onClose()
-  }
+  const existing = new Set(d.tasks.filter((x) => !x.archived && x.catalog_id).map((x) => x.catalog_id!))
 
   useEffect(() => {
     if (!open) return
     setF(task ? { ...task, interval_days: task.interval_days ?? 7 } : blank())
     setTouched({ room: !!task, minutes: !!task })
-    setMode(task ? 'own' : 'list'); setSel(new Set())
+    setMode(task ? 'own' : 'lib'); setSel(new Set())
   }, [open, task])
 
   const set = (p: Partial<TaskInput>) => setF((x) => ({ ...x, ...p }))
@@ -37,94 +32,77 @@ export function TaskSheet({ open, onClose, task, onLogDone }: { open: boolean; o
     set({ title, ...(!touched.room && { room: g.room }), ...(!touched.minutes && g.minutes && { minutes: g.minutes }) })
   }
   const valid = f.title.trim() && (f.recurrence !== 'weekly' || f.weekdays.length)
+  const toggle = (c: CatalogTask) => setSel((s) => { const n = new Set(s); n.has(c.id) ? n.delete(c.id) : n.add(c.id); return n })
 
   async function save() {
     if (!valid) return
     setBusy(true)
     await act.saveTask({
-      ...f,
-      title: f.title.trim(),
+      ...f, title: f.title.trim(),
       weekdays: f.recurrence === 'weekly' ? [...f.weekdays].sort() : [],
       interval_days: f.recurrence === 'interval' ? f.interval_days : null,
       due_date: f.recurrence === 'once' ? f.due_date : null,
     }, task?.id)
-    setBusy(false)
-    onClose()
+    setBusy(false); onClose()
   }
-
-  const who = [{ v: '', label: '✨ Slim verdelen' }, ...d.members.map((m) => ({ v: m.user_id, label: m.user_id === d.me.user_id ? 'Ik' : m.name }))]
+  async function addSelected() {
+    setBusy(true)
+    await act.addCatalog(CATALOG.flatMap((r) => r.tasks).filter((x) => sel.has(x.id) && !existing.has(x.id)))
+    setBusy(false); onClose()
+  }
+  const days = list('days.short')
 
   return (
-    <Sheet open={open} onClose={onClose} title={task ? 'Taak aanpassen' : 'Nieuwe taak'}>
-      {!task && (
-        <div className="segmented mode-switch" data-active={mode === 'list' ? 0 : 1}>
-          <span className="seg-pill" />
-          <button type="button" className={mode === 'list' ? 'on' : ''} onClick={() => setMode('list')}>📚 Uit de lijst</button>
-          <button type="button" className={mode === 'own' ? 'on' : ''} onClick={() => setMode('own')}>✏️ Zelf maken</button>
-        </div>
-      )}
-      {mode === 'list' && !task ? (
-        <div className="fade-in">
+    <Sheet open={open} onClose={onClose} title={task ? t('task.edit') : t('task.new')}>
+      {!task && <Segmented value={mode} onChange={setMode} options={[{ v: 'lib', label: t('task.fromLib') }, { v: 'own', label: t('task.own') }]} />}
+
+      {mode === 'lib' && !task ? (
+        <>
           <CatalogPicker rooms={d.household.rooms} selected={sel} onToggle={toggle} existing={existing} />
           <button className="btn primary block sticky-cta" onClick={addSelected} disabled={!sel.size || busy}>
-            {busy ? <span className="spinner" /> : sel.size ? `${sel.size} ${sel.size === 1 ? 'taak' : 'taken'} toevoegen` : 'Kies één of meer taken'}
+            {busy ? <span className="spinner" /> : sel.size ? t('task.addN', { n: sel.size, tasks: plural(sel.size) }) : t('task.pickSome')}
           </button>
-        </div>
+        </>
       ) : (
-      <form className="fade-in" onSubmit={(e) => { e.preventDefault(); save() }}>
-        <input className="field big" autoFocus={!task} placeholder="Wat moet er gebeuren?" value={f.title}
-          onChange={(e) => onTitle(e.target.value)} enterKeyHint="done" aria-label="Taak" />
+        <form style={{ display: 'flex', flexDirection: 'column', gap: 20 }} onSubmit={(e) => { e.preventDefault(); save() }}>
+          <input className="field big" autoFocus={!task} placeholder={t('task.placeholder')} value={f.title} onChange={(e) => onTitle(e.target.value)} enterKeyHint="done" aria-label={t('task.placeholder')} />
 
-        <label className="label">Ruimte</label>
-        <Chips value={f.room ?? ''} onChange={(v) => { setTouched((t) => ({ ...t, room: true })); set({ room: v || null }) }}
-          options={ROOMS.map((r) => ({ v: r.id, label: <>{r.icon} {r.label}</> }))} />
+          <div><span className="label">{t('task.room')}</span>
+            <Chips value={f.room ?? ''} onChange={(v) => { setTouched((x) => ({ ...x, room: true })); set({ room: v || null }) }}
+              options={ROOMS.map((r) => ({ v: r.id as string, label: room(r.id).label, icon: r.icon }))} /></div>
 
-        <label className="label">Hoe lang ongeveer?</label>
-        <Chips value={f.minutes} onChange={(v) => { setTouched((t) => ({ ...t, minutes: true })); set({ minutes: v }) }}
-          options={[5, 10, 15, 20, 30].map((v) => ({ v, label: `${v} min` }))} />
+          <div><span className="label">{t('task.duration')}</span>
+            <Chips value={f.minutes} onChange={(v) => { setTouched((x) => ({ ...x, minutes: true })); set({ minutes: v }) }}
+              options={[5, 10, 15, 20, 30].map((v) => ({ v, label: `${v} ${t('common.min')}` }))} /></div>
 
-        <label className="label">Hoe zwaar?</label>
-        <Chips value={f.effort} onChange={(v) => set({ effort: v })}
-          options={[{ v: 1, label: '🪶 Licht' }, { v: 2, label: 'Normaal' }, { v: 3, label: '💪 Zwaar' }]} />
+          <div><span className="label">{t('task.effort')}</span>
+            <Chips value={f.effort} onChange={(v) => set({ effort: v })}
+              options={[{ v: 1, label: t('effort.1'), icon: 'feather' }, { v: 2, label: t('effort.2') }, { v: 3, label: t('effort.3'), icon: 'muscle' }]} />
+            <p className="group-f" style={{ marginTop: 8 }}>{t('task.effortNote')} <b>+{xpOf(f.minutes, f.effort)} XP</b></p></div>
 
-        <label className="label">Wanneer?</label>
-        <div className="segmented" style={{ ['--n' as string]: 3 }} data-active={['once', 'weekly', 'interval'].indexOf(f.recurrence)}>
-          <span className="seg-pill" />
-          {([['once', 'Eén keer'], ['weekly', 'Vaste dagen'], ['interval', 'Elke x dagen']] as const).map(([v, l]) => (
-            <button type="button" key={v} className={f.recurrence === v ? 'on' : ''} onClick={() => set({ recurrence: v })}>{l}</button>
-          ))}
-        </div>
-        {f.recurrence === 'weekly' && (
-          <Chips multi value={f.weekdays} onChange={(v) => set({ weekdays: f.weekdays.includes(v) ? f.weekdays.filter((x) => x !== v) : [...f.weekdays, v] })}
-            options={DAYS.map((l, v) => ({ v, label: l }))} />
-        )}
-        {f.recurrence === 'interval' && (
-          <Chips value={f.interval_days ?? 7} onChange={(v) => set({ interval_days: v })}
-            options={[2, 3, 7, 14, 30].map((v) => ({ v, label: v === 7 ? 'elke week' : v === 14 ? '2 weken' : v === 30 ? 'maand' : `${v} dagen` }))} />
-        )}
-        {f.recurrence === 'once' && (
-          <div className="row-field">
-            <span>Vanaf</span>
-            <input type="date" className="field" value={f.due_date ?? ''} onChange={(e) => set({ due_date: e.target.value || null })} />
-            {!f.due_date && <span className="muted small">zo snel mogelijk</span>}
-          </div>
-        )}
+          <div><span className="label">{t('task.when')}</span>
+            <Segmented value={f.recurrence} onChange={(v) => set({ recurrence: v })}
+              options={[{ v: 'once', label: t('task.whenOnce') }, { v: 'weekly', label: t('task.whenWeekly') }, { v: 'interval', label: t('task.whenInterval') }]} />
+            <div style={{ marginTop: 10 }}>
+              {f.recurrence === 'weekly' && <Chips multi value={f.weekdays} options={days.map((l, v) => ({ v, label: l }))}
+                onChange={(v) => set({ weekdays: f.weekdays.includes(v) ? f.weekdays.filter((x) => x !== v) : [...f.weekdays, v] })} />}
+              {f.recurrence === 'interval' && <Chips value={f.interval_days ?? 7} onChange={(v) => set({ interval_days: v })}
+                options={[2, 3, 7, 14, 30].map((v) => ({ v, label: v === 7 ? t('freq.weekly') : v === 14 ? t('freq.biweekly') : v === 30 ? t('freq.monthly') : t('freq.n', { n: v }) }))} />}
+              {f.recurrence === 'once' && (
+                <div className="list"><label className="row"><span className="row-main"><span className="row-title">{t('task.from')}</span>
+                  {!f.due_date && <span className="row-sub">{t('task.asap')}</span>}</span>
+                  <input type="date" className="field" style={{ width: 'auto' }} value={f.due_date ?? ''} onChange={(e) => set({ due_date: e.target.value || null })} /></label></div>
+              )}
+            </div></div>
 
-        {d.members.length > 1 && <>
-          <label className="label">Voor wie?</label>
-          <Chips value={f.assignee ?? ''} onChange={(v) => set({ assignee: v || null })} options={who} />
-        </>}
+          {d.members.length > 1 && <div><span className="label">{t('task.who')}</span>
+            <Chips value={f.assignee ?? ''} onChange={(v) => set({ assignee: v || null })}
+              options={[{ v: '', label: t('task.whoAuto') }, ...d.members.map((m) => ({ v: m.user_id, label: m.user_id === d.me.user_id ? t('common.you') : m.name }))]} /></div>}
 
-        <button className="btn primary block" disabled={!valid || busy}>{busy ? 'Opslaan…' : task ? 'Opslaan' : 'Toevoegen'}</button>
-        {task && onLogDone && (
-          <button type="button" className="btn soft block" onClick={() => onLogDone(task)}>🙌 Ik heb dit al gedaan</button>
-        )}
-        {task && (
-          <button type="button" className="btn ghost danger block" onClick={async () => { await act.archiveTask(task.id); onClose() }}>
-            Taak verwijderen
-          </button>
-        )}
-      </form>
+          <button className="btn primary block" disabled={!valid || busy}>{busy ? <span className="spinner" /> : task ? t('common.save') : t('task.add')}</button>
+          {task && onLogDone && <button type="button" className="btn tinted block" onClick={() => onLogDone(task)}>{t('task.logDone')}</button>}
+          {task && <button type="button" className="btn ghost danger block" onClick={async () => { await act.archiveTask(task.id); onClose() }}>{t('task.delete')}</button>}
+        </form>
       )}
     </Sheet>
   )

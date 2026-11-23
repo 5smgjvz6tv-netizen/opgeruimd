@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
       // Snooze voorbij: stuur de herinnering mét het lijstje.
       const { data: m } = await db.from('members').select('*').eq('user_id', o.user_id).single()
       if (!m || (!m.snooze_until && !m.snooze_on_arrive)) continue // al afgehandeld (bijv. thuisgekomen)
-      const msg = await reminder(m, localDate(), o.title)
+      const msg = await reminder(m, localDate(), 'snooze')
       await db.from('members').update({ snooze_until: null, snooze_reason: null, snooze_on_arrive: false }).eq('user_id', o.user_id)
       if (msg) await push(o.user_id, msg)
     } else {
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     if (m.snooze_on_arrive) continue
     await db.from('members').update({ reminded_on: today }).eq('user_id', m.user_id)
     await ensurePlan(db, m.household_id, today)
-    const msg = await reminder(m, today, `Tijd voor je opruimronde, ${m.name} ✨`)
+    const msg = await reminder(m, today, 'time')
     if (msg) { await push(m.user_id, msg); fallbacks++ }
   }
   return json({ ok: true, sent: (due ?? []).length, fallbacks })

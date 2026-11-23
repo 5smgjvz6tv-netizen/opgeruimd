@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { localDate, suggestExtras, weekday } from '../../supabase/functions/_shared/planner'
-import { Avatar, Check, Confetti, Ring } from '../components/Bits'
+import { addDays, localDate, suggestExtras, weekday } from '../../supabase/functions/_shared/planner'
+import { Avatar, Check, Confetti, Ic, Ring, XpBar } from '../components/Bits'
 import { Icon } from '../components/Icon'
 import { Sheet } from '../components/Sheet'
 import { SnoozeSheet } from '../components/SnoozeSheet'
 import { useApp, type Member, type PlanItem } from '../lib/data'
+import { floatText, haptic, sound } from '../lib/feel'
+import { levelOf, weeklyChallenge, xpOf } from '../lib/game'
+import { list, locale, plural, t } from '../lib/i18n'
 import { isStandalone, pushState } from '../lib/push'
 import { room } from '../lib/rooms'
 import { streak } from '../lib/stats'
-import { floatText, haptic, sound } from '../lib/feel'
-import { points } from '../../supabase/functions/_shared/planner'
 
-const greet = () => { const h = new Date().getHours(); return h < 6 ? 'Goedenacht' : h < 12 ? 'Goedemorgen' : h < 18 ? 'Goedemiddag' : 'Goedenavond' }
-const dateLabel = () => new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })
+const greet = () => { const h = new Date().getHours(); return t(h < 6 ? 'today.night' : h < 12 ? 'today.morning' : h < 18 ? 'today.afternoon' : 'today.evening') }
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
 function useNow(active: boolean) {
@@ -21,49 +21,44 @@ function useNow(active: boolean) {
   return now
 }
 
-function beep() {
-  try {
-    const ctx = new AudioContext()
-    ;[0, 0.25, 0.5].forEach((t) => {
-      const o = ctx.createOscillator(), g = ctx.createGain()
-      o.frequency.value = 880; o.connect(g); g.connect(ctx.destination)
-      g.gain.setValueAtTime(0.25, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.2)
-      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.2)
-    })
-  } catch { /* geen geluid mogelijk */ }
-}
-
-export function Today({ goSettings, goTogether, onLog }: { goSettings: () => void; goTogether: () => void; onLog: () => void }) {
+export function Today({ goSettings, goProgress, onLog }: { goSettings: () => void; goProgress: () => void; onLog: () => void }) {
   const { d, act } = useApp()
-  const { me, partner, household: hh } = d
+  const { me, household: hh } = d
   const today = localDate()
-  const title = (id: string) => d.tasks.find((t) => t.id === id)?.title ?? 'Taak'
+  const taskOf = (id: string) => d.tasks.find((x) => x.id === id)
+  const title = (id: string) => taskOf(id)?.title ?? '—'
+  const xpItem = (i: PlanItem) => xpOf(i.minutes, taskOf(i.task_id)?.effort)
   const todays = d.items.filter((i) => i.date === today)
   const mine = todays.filter((i) => i.user_id === me.user_id)
-  const theirs = partner ? todays.filter((i) => i.user_id === partner.user_id) : []
   const requests = todays.filter((i) => i.swap_to === me.user_id && i.status === 'todo')
-  const doneMin = mine.filter((i) => i.status === 'done').reduce((s, i) => s + i.minutes, 0)
+  const doneItems = mine.filter((i) => i.status === 'done')
+  const doneMin = doneItems.reduce((s, i) => s + i.minutes, 0)
   const totalMin = mine.reduce((s, i) => s + i.minutes, 0)
-  const allDone = mine.length > 0 && mine.every((i) => i.status === 'done')
-  // Feestje zodra je de laatste taak afvinkt (niet bij het openen van de app).
-  const [party, setParty] = useState(0)
-  const wasDone = useRef(allDone)
-  useEffect(() => {
-    if (allDone && !wasDone.current) { setParty(Date.now()); sound('done'); haptic([10, 60, 10, 60, 20]) }
-    wasDone.current = allDone
-  }, [allDone])
+  const totalXp = mine.reduce((s, i) => s + xpItem(i), 0)
+  const earnedXp = doneItems.reduce((s, i) => s + xpItem(i), 0)
+  const allDone = mine.length > 0 && doneItems.length === mine.length
   const rest = hh.rest_days.includes(weekday(today))
 
+  // Niveau + level-up-moment
+  const myXp = d.xp[me.user_id] ?? 0
+  const lv = levelOf(myXp)
+  const prevLv = useRef(lv.n)
+  const [levelUp, setLevelUp] = useState<number | null>(null)
+  useEffect(() => { if (lv.n > prevLv.current) { setLevelUp(lv.n); sound('done'); haptic([10, 60, 10, 60, 30]) } prevLv.current = lv.n }, [lv.n])
+
+  // Ring dicht: klein feestje
+  const [party, setParty] = useState(0)
+  const wasDone = useRef(allDone)
+  useEffect(() => { if (allDone && !wasDone.current) { setParty(Date.now()); sound('done'); haptic([10, 60, 10]) } wasDone.current = allDone }, [allDone])
+
+  // Timer
   const endsAt = me.timer_ends_at ? Date.parse(me.timer_ends_at) : 0
   const now = useNow(!!endsAt)
   const left = Math.max(0, Math.round((endsAt - now) / 1000))
   const running = endsAt > 0 && left > 0
   const [timeUp, setTimeUp] = useState(false)
   const wasRunning = useRef(running)
-  useEffect(() => {
-    if (wasRunning.current && !running && endsAt) { beep(); setTimeUp(true); act.stopTimer() }
-    wasRunning.current = running
-  }, [running, endsAt, act])
+  useEffect(() => { if (wasRunning.current && !running && endsAt) { sound('done'); haptic([20, 80, 20]); setTimeUp(true); act.stopTimer() } wasRunning.current = running }, [running, endsAt, act])
 
   const [snoozeOpen, setSnoozeOpen] = useState(false)
   const [menu, setMenu] = useState<PlanItem | null>(null)
@@ -71,107 +66,115 @@ export function Today({ goSettings, goTogether, onLog }: { goSettings: () => voi
   const snoozed = !!me.snooze_reason && (me.snooze_on_arrive || (!!me.snooze_until && Date.parse(me.snooze_until) > Date.now()))
   const minutesLeft = running ? Math.floor(left / 60) : Math.max(0, hh.block_minutes - doneMin)
   const planned = useMemo(() => new Set(todays.map((i) => i.task_id)), [todays])
-  const extras = (allDone || showExtras) ? suggestExtras(d.tasks, today, planned, minutesLeft) : []
-
-  const [push, setPush] = useState<string>('on')
+  const extras = (allDone || showExtras || !mine.length) && !rest ? suggestExtras(d.tasks, today, planned, minutesLeft) : []
+  const [push, setPush] = useState('on')
   useEffect(() => { pushState().then(setPush) }, [])
   const s = streak(d)
-  const tagline = pickLine({ rest, allDone, running, snoozed, n: mine.filter((i) => i.status !== 'done').length, min: totalMin - doneMin, streak: s, partner: partner?.name })
-  // Afvinken: tik, plopje en zwevende punten.
+  const ch = weeklyChallenge(d)
+  const missing = hh.size - d.members.length
+
   const toggle = (i: PlanItem, el?: Element | null) => {
-    if (i.status !== 'done') {
-      haptic(); sound('pop')
-      floatText(el ?? null, `+${points(i.minutes, d.tasks.find((t) => t.id === i.task_id)?.effort)} pt`)
-    } else haptic(4)
+    if (i.status !== 'done') { haptic(); sound('pop'); floatText(el ?? null, `+${xpItem(i)} XP`) } else haptic(4)
     act.toggle(i)
   }
+  const time = me.fallback_time?.slice(0, 5)
+  const reminderNote = time ? t('today.reminderBoth', { time }) : t('today.reminderArrive')
 
   return (
-    <div className="screen">
-      <header className="large-title">
+    <div className="page">
+      <header className="hdr">
         <div>
-          <p className="eyebrow">{dateLabel()}</p>
+          <p className="eyebrow" style={{ textTransform: 'capitalize' }}>{new Date().toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long' })}</p>
           <h1>{greet()}, {me.name}</h1>
-          <p className="tagline" key={tagline}>{tagline}</p>
         </div>
-        {s > 0 && <span className="pill flame" title="Dagen op rij">🔥 {s}</span>}
       </header>
 
-      {push !== 'on' && (
-        <button className="banner" onClick={goSettings}>
-          <Icon name="bell" />
-          <span><b>{isStandalone ? 'Zet meldingen aan' : 'Zet de app op je beginscherm'}</b><br />
-            <span className="muted small">{isStandalone ? 'Dan krijg je een seintje als je thuiskomt.' : 'Pas dan werken meldingen op je iPhone.'}</span></span>
-          <Icon name="chevron" size={18} />
-        </button>
+      <button className="card me-strip" onClick={goProgress} aria-label={t('level', { n: lv.n })}>
+        <span className="lv-badge">{lv.n}</span>
+        <span className="row-main">
+          <span className="row-title">{t('level', { n: lv.n })} · {lv.title}</span>
+          <XpBar frac={lv.frac} />
+          <span className="row-sub">{t('level.toNext', { xp: lv.next - myXp, n: lv.n + 1 })}</span>
+        </span>
+        {s > 0 && <span className="streak"><Icon name="flame" size={18} />{s}</span>}
+      </button>
+
+      {(!isStandalone || push === 'off') && (
+        <div className="list"><button className="row" onClick={goSettings}>
+          <Ic name={isStandalone ? 'bell' : 'download'} tone="coral" />
+          <span className="row-main"><span className="row-title">{t(isStandalone ? 'today.push' : 'today.install')}</span>
+            <span className="row-sub">{t(isStandalone ? 'today.pushSub' : 'today.installSub')}</span></span>
+          <span className="chev"><Icon name="chevron" size={16} /></span>
+        </button></div>
       )}
 
-      {requests.map((i) => (
-        <div className="card swap-card" key={i.id}>
-          <p><b>{partner?.name}</b> vraagt of jij <b>{title(i.task_id)}</b> kunt doen <span className="muted">(±{i.minutes} min)</span></p>
-          <div className="btn-row">
-            <button className="btn primary" onClick={() => act.answerSwap(i, title(i.task_id), true)}>Ja, doe ik</button>
-            <button className="btn soft" onClick={() => act.answerSwap(i, title(i.task_id), false)}>Nu niet</button>
+      {requests.map((i) => {
+        const from = d.members.find((m) => m.user_id === i.user_id)
+        return (
+          <div key={i.id} className="card pad">
+            <div className="row" style={{ padding: 0, minHeight: 0 }}>
+              <Ic name="swap" tone="coral" />
+              <span className="row-main"><span className="row-title">{title(i.task_id)}</span>
+                <span className="row-sub">{t('today.asksYou', { name: from?.name ?? '' })}</span></span>
+              <span className="xp-chip">+{xpItem(i)}</span>
+            </div>
+            <div className="btn-row" style={{ marginTop: 12 }}>
+              <button className="btn primary grow" onClick={() => act.answerSwap(i, title(i.task_id), true)}>{t('today.swapYes')}</button>
+              <button className="btn soft grow" onClick={() => act.answerSwap(i, title(i.task_id), false)}>{t('today.swapNo')}</button>
+            </div>
           </div>
-        </div>
-      ))}
+        )
+      })}
 
-      <section className={'card hero' + (allDone ? ' all-done' : '') + (snoozed && !running ? ' is-snoozed' : '') + (timeUp ? ' timer-up' : '')}>
+      <section className={'card round' + (allDone ? ' all-done' : '')}>
         {party > 0 && <Confetti key={party} />}
         {rest && !mine.length ? (
-          <Empty icon="🌿" title="Rustdag" text="Vandaag geen taken. Lekker niks doen." />
+          <div className="round-head"><Ic name="leaf" tone="gold" lg /><div><h2>{t('today.rest')}</h2><p className="row-sub">{t('today.restSub')}</p></div></div>
         ) : !mine.length ? (
-          <Empty icon="✨" title="Niks op je lijstje" text="Het huis staat er goed voor." />
+          <div className="round-head"><Ic name="sparkle" lg /><div><h2>{t('today.empty')}</h2><p className="row-sub">{t('today.emptySub')}</p></div></div>
         ) : (
           <>
-            <div className="hero-head">
-              <Ring value={totalMin ? doneMin / totalMin : 0}>
-                {running ? <Icon name="clock" size={20} /> : `${mine.filter((i) => i.status === 'done').length}/${mine.length}`}
-              </Ring>
-              <div>
-                <h2>{allDone ? 'Klaar voor vandaag! 🎉' : running ? 'Bezig…' : 'Jouw opruimronde'}</h2>
-                <p className="muted">{allDone ? `${doneMin} min gedaan. Morgen weer.` : `${mine.length} ${mine.length === 1 ? 'taakje' : 'taakjes'} · ±${totalMin} min`}</p>
+            <div className="round-head">
+              <Ring value={totalMin ? doneMin / totalMin : 0}>{allDone ? <Icon name="check" size={20} /> : `${doneItems.length}/${mine.length}`}</Ring>
+              <div className="grow">
+                <h2>{allDone ? t('today.done') : running ? t('today.running') : t('today.round')}</h2>
+                <p className="row-sub">{allDone ? t('today.doneSub', { xp: earnedXp, min: doneMin })
+                  : t('today.roundSub', { n: mine.length, tasks: plural(mine.length), min: totalMin, xp: totalXp })}</p>
               </div>
             </div>
 
             {running && (
-              <div className={'timer' + (left <= 10 ? ' ending' : '')} role="timer" aria-live="off" aria-label={`Nog ${mmss(left)}`}>
-                <span className="timer-num">{mmss(left).split(':')[0]}<span className="colon">:</span>{mmss(left).split(':')[1]}</span>
-                <div className="timer-bar"><i style={{ width: `${(left / (hh.block_minutes * 60)) * 100}%` }} /></div>
+              <div className={'timer' + (left <= 10 ? ' ending' : '')} role="timer">
+                <span className="timer-num">{mmss(left)}</span>
+                <XpBar frac={left / (hh.block_minutes * 60)} />
               </div>
             )}
-            {timeUp && !running && (
-              <div className="notice">⏰ Tijd is om, goed bezig! <button className="link" onClick={() => setTimeUp(false)}>Oké</button></div>
-            )}
-
+            {timeUp && !running && <div className="notice"><Icon name="alarm" size={18} />{t('today.timeUp')}<button onClick={() => setTimeUp(false)}><Icon name="x" size={16} /></button></div>}
             {snoozed && !running && (
               <div className="snoozed">
-                <Icon name="moon" size={18} />
-                <span>Later · {me.snooze_reason}<br />
-                  <span className="muted small">{me.snooze_on_arrive ? 'Ik herinner je als je thuiskomt' : `Herinnering om ${new Date(me.snooze_until!).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`}</span></span>
-                <button className="link" onClick={act.unsnooze}>Toch nu</button>
+                <Ic name="moon" tone="gray" />
+                <span className="row-main"><span className="row-title">{t('today.snoozed', { reason: me.snooze_reason ?? '' })}</span>
+                  <span className="row-sub">{me.snooze_on_arrive ? t('today.snoozeArrive') : t('today.snoozeAt', { time: new Date(me.snooze_until!).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) })}</span></span>
+                <button className="btn tinted sm" onClick={act.unsnooze}>{t('today.resume')}</button>
               </div>
             )}
 
             <ul className="tasks">
-              {mine.map((i) => (
-                <TaskRow key={i.id} item={i} title={title(i.task_id)} onToggle={(el) => toggle(i, el)} onMore={() => setMenu(i)} />
-              ))}
+              {mine.map((i) => <TaskRow key={i.id} item={i} onToggle={(el) => toggle(i, el)} onMore={() => setMenu(i)} />)}
             </ul>
 
             {(!allDone || running) && (
               <div className="btn-row">
                 {running ? (
                   <>
-                    <button className="btn primary grow" onClick={() => { act.stopTimer(); setShowExtras(true) }}><Icon name="check" size={18} /> Ik ben klaar</button>
-                    <button className="btn soft" onClick={act.stopTimer} aria-label="Timer stoppen"><Icon name="stop" size={16} fill /></button>
+                    <button className="btn primary grow" onClick={() => { act.stopTimer(); setShowExtras(true) }}><Icon name="check" size={18} />{t('today.finish')}</button>
+                    <button className="btn soft" onClick={act.stopTimer} aria-label={t('today.stop')}><Icon name="stop" size={16} /></button>
                   </>
                 ) : (
                   <>
-                    <button className="btn primary grow" onClick={() => { act.startTimer(hh.block_minutes); act.unsnooze(); setTimeUp(false) }}>
-                      <Icon name="play" size={16} fill /> Start {hh.block_minutes} min
-                    </button>
-                    {!snoozed && <button className="btn soft" onClick={() => setSnoozeOpen(true)}><Icon name="moon" size={18} /> Later</button>}
+                    <button className="btn primary grow" onClick={() => { act.startTimer(hh.block_minutes); if (snoozed) act.unsnooze(); setTimeUp(false); haptic() }}>
+                      <Icon name="play" size={16} />{t('today.start', { min: hh.block_minutes })}</button>
+                    {!snoozed && <button className="btn soft" onClick={() => setSnoozeOpen(true)}><Icon name="moon" size={18} />{t('today.later')}</button>}
                   </>
                 )}
               </div>
@@ -179,151 +182,158 @@ export function Today({ goSettings, goTogether, onLog }: { goSettings: () => voi
           </>
         )}
 
-        {(allDone || !mine.length || showExtras) && (
-          extras.length ? (
-            <div className="extras">
-              <p className="label">{minutesLeft > 0 ? `Nog ${minutesLeft} min over? Zin in een extraatje:` : 'Zin in een extraatje?'}</p>
-              {extras.map((t) => (
-                <button key={t.id} className="extra" onClick={() => act.doNow(t)}>
-                  <span>{room(t.room).icon}</span><span className="grow">{t.title}</span>
-                  <span className="muted small">{t.minutes} min</span><Icon name="plus" size={18} />
+        {extras.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <span className="label" style={{ marginLeft: 0 }}>{minutesLeft > 0 && (allDone || running) ? t('today.extrasTitle', { min: minutesLeft }) : t('today.extrasTitleNoTime')}</span>
+            <div className="list" style={{ boxShadow: 'none', background: 'var(--fill)' }}>
+              {extras.map((x) => (
+                <button key={x.id} className="row" onClick={() => { haptic(); act.doNow(x) }}>
+                  <Ic name={room(x.room).icon} /><span className="row-main"><span className="row-title">{x.title}</span>
+                    <span className="row-sub">{room(x.room).label}<span className="sep" />{x.minutes} {t('common.min')}</span></span>
+                  <span className="xp-chip">+{xpOf(x.minutes, x.effort)}</span><Icon name="plus" size={18} />
                 </button>
               ))}
             </div>
-          ) : (allDone || showExtras) && <p className="muted small center">Er is verder niks dat nu nodig is. Geniet ervan!</p>
+          </div>
         )}
+
+        <div className="round-foot"><Icon name="bell" />{reminderNote}<button onClick={goSettings}>{t('common.edit')}</button></div>
       </section>
 
-      <button className="log-cta" onClick={onLog}>
-        <span className="log-cta-ic">🙌</span>
-        <span className="grow"><b>Zelf al iets opgeruimd?</b><br /><span className="muted small">Log het. Het telt mee en de planning schuift mee.</span></span>
-        <Icon name="plus" size={20} />
+      <button className="card challenge" onClick={goProgress}>
+        <Ic name={ch.icon} tone={ch.done ? 'gold' : undefined} lg />
+        <span className="row-main">
+          <span className="row-sub" style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.03em', fontSize: 11 }}>{t('prog.challenge')}</span>
+          <span className="row-title">{t(ch.title)}</span>
+          <span className="row-sub">{t(ch.sub)}</span>
+          <XpBar frac={ch.frac} />
+        </span>
+        <span className="row-main" style={{ flex: 'none', alignItems: 'flex-end', gap: 4 }}>
+          <span className="tnum" style={{ fontWeight: 700 }}>{ch.have}/{ch.goal}</span>
+          {ch.done && <span className="xp-chip">{t('prog.challengeDone')}</span>}
+        </span>
       </button>
 
-      {!partner && (
-        <button className="invite-nudge" onClick={goTogether}>
-          <span className="nudge-av"><span>{me.name.slice(0, 1).toUpperCase()}</span><span className="plus">+</span></span>
-          <span className="grow"><b>Samen gaat het twee keer zo snel</b><br /><span className="muted small">Nodig je huisgenoot uit en verdeel de taken eerlijk</span></span>
-          <Icon name="chevron" size={18} />
-        </button>
-      )}
+      <div className="list"><button className="row" onClick={onLog}>
+        <Ic name="check-circle" tone="gold" />
+        <span className="row-main"><span className="row-title">{t('today.log')}</span><span className="row-sub">{t('today.logSub')}</span></span>
+        <Icon name="plus" size={20} />
+      </button></div>
 
-      {partner && (
-        <section className="card partner">
-          <div className="partner-head">
-            <Avatar m={partner} />
-            <div className="grow">
-              <b>{partner.name}</b>
-              <p className="muted small"><PartnerStatus m={partner} items={theirs} /></p>
-            </div>
-          </div>
-          {theirs.length > 0 && (
-            <ul className="mini">
-              {theirs.map((i) => (
-                <li key={i.id} className={i.status === 'done' ? 'done' : ''}>
-                  <span className="dot">{i.status === 'done' ? '✓' : ''}</span>{title(i.task_id)}
-                  {i.helper && <span className="tag">👫 samen</span>}
-                  {i.swap_to === me.user_id && <span className="tag">vraagt jou</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+      {d.others.length > 0 && (
+        <div className="group">
+          <h3 className="group-h">{t('today.housemates')}</h3>
+          <div className="list">{d.others.map((o) => <Mate key={o.user_id} m={o} items={todays.filter((i) => i.user_id === o.user_id)} />)}</div>
+        </div>
+      )}
+      {!d.solo && missing > 0 && (
+        <div className="list"><button className="row" onClick={goProgress}>
+          <Ic name="duo" tone="coral" />
+          <span className="row-main"><span className="row-title">{t('today.invite')}</span><span className="row-sub">{t('today.inviteSub', { n: d.members.length, size: hh.size })}</span></span>
+          <span className="chev"><Icon name="chevron" size={16} /></span>
+        </button></div>
       )}
 
       <SnoozeSheet open={snoozeOpen} onClose={() => setSnoozeOpen(false)} />
-      <ItemMenu item={menu} title={menu ? title(menu.task_id) : ''} onClose={() => setMenu(null)} />
+      <ItemMenu item={menu} onClose={() => setMenu(null)} />
+      <Sheet open={levelUp !== null} onClose={() => setLevelUp(null)} title="">
+        <div className="levelup">
+          <Confetti />
+          <span className="big">{levelUp}</span>
+          <h2 style={{ fontSize: 22 }}>{t('level.up.title', { n: levelUp ?? 0 })}</h2>
+          <p className="muted">{t('level.up.body', { title: lv.title })}</p>
+        </div>
+        <button className="btn primary block" onClick={() => setLevelUp(null)}>{t('common.done')}</button>
+      </Sheet>
     </div>
   )
 }
 
-function TaskRow({ item, title, onToggle, onMore }: { item: PlanItem; title: string; onToggle: (el?: Element | null) => void; onMore: () => void }) {
+function TaskRow({ item, onToggle, onMore }: { item: PlanItem; onToggle: (el?: Element | null) => void; onMore: () => void }) {
   const { d } = useApp()
-  const t = d.tasks.find((x) => x.id === item.task_id)
+  const task = d.tasks.find((x) => x.id === item.task_id)
+  const r = room(task?.room ?? null)
   const done = item.status === 'done'
+  const name = task?.title ?? '—'
   return (
     <li className={'task' + (done ? ' done' : '')}>
-      <Check done={done} onClick={(e) => onToggle(e?.currentTarget)} label={title} />
-      <button className="task-main" onClick={(e) => onToggle(e.currentTarget.parentElement?.querySelector(".check"))}>
-        <span className="task-title"><span className="strike">{title}</span></span>
-        <span className="muted small">{room(t?.room ?? null).icon} {room(t?.room ?? null).label} · {item.minutes} min{item.extra ? ' · extraatje' : ''}</span>
+      <Check done={done} onClick={(e) => onToggle(e?.currentTarget)} label={name} />
+      <button className="task-main" onClick={(e) => onToggle(e.currentTarget.parentElement?.querySelector('.check'))}>
+        <span className="task-title"><span className="strike">{name}</span></span>
+        <span className="row-sub"><Icon name={r.icon} size={13} />{r.label}<span className="sep" />{item.minutes} {t('common.min')}
+          {task?.effort === 3 && <><span className="sep" /><Icon name="muscle" size={13} /></>}
+          {item.extra && <><span className="sep" />{t('today.extra')}</>}</span>
       </button>
-      {item.swap_to && <span className="tag">gevraagd</span>}
-      {item.helper && <span className="tag">👫 samen</span>}
-      <button className="icon-btn" onClick={onMore} aria-label={`Meer opties voor ${title}`}><Icon name="more" size={20} /></button>
+      {item.swap_to && <span className="tag gray">{t('today.asked')}</span>}
+      {item.helper && <span className="tag">{t('today.together')}</span>}
+      {!done && <span className="xp-chip">+{xpOf(item.minutes, task?.effort)}</span>}
+      <button className="icon-btn" onClick={onMore} aria-label={name}><Icon name="more" size={20} /></button>
     </li>
   )
 }
 
-/** Opties per taak: verzetten, aan de ander vragen, samen gedaan. */
-function ItemMenu({ item, title, onClose }: { item: PlanItem | null; title: string; onClose: () => void }) {
-  const { d, act } = useApp()
-  const p = d.partner
-  const live = item && d.items.find((i) => i.id === item.id)
-  const run = (fn: () => unknown) => async () => { onClose(); await fn() }
-  const nextSat = ((5 - weekday(localDate()) + 7) % 7) || 7
+function Mate({ m, items }: { m: Member; items: PlanItem[] }) {
+  const done = items.filter((i) => i.status === 'done').length
+  const status = m.timer_ends_at && Date.parse(m.timer_ends_at) > Date.now() ? t('today.mateBusy')
+    : m.snooze_reason ? t('today.mateSnoozed', { reason: m.snooze_reason })
+    : !items.length ? t('today.mateNone') : done === items.length ? t('today.mateDone') : t('today.mateProgress', { done, n: items.length })
   return (
-    <Sheet open={!!item} onClose={onClose} title={title}>
-      {live && live.status === 'done' && (
-        <div className="menu">
-          <button className="menu-item" onClick={run(() => act.toggle(live))}>
-            <span>↩️</span><span className="grow">Toch niet gedaan<br /><span className="muted small">Haalt het vinkje weg</span></span>
-          </button>
-        </div>
-      )}
-      {live && (live.status === 'done' ? (
-        p ? (
-          <div className="menu">
-            <button className="menu-item" onClick={run(() => act.together(live, !live.helper))}>
-              <span>👫</span><span className="grow">{live.helper ? 'Toch niet samen gedaan' : `Samen gedaan met ${p.name}`}<br />
-                <span className="muted small">Telt dan voor jullie allebei in het weekoverzicht</span></span>
-            </button>
-          </div>
-        ) : null
-      ) : (
-        <div className="menu">
-          <p className="label">Verzetten naar</p>
-          <button className="menu-item" onClick={run(() => act.postpone(live, 1))}><Icon name="calendar" size={20} /><span className="grow">Morgen</span></button>
-          <button className="menu-item" onClick={run(() => act.postpone(live, 2))}><Icon name="calendar" size={20} /><span className="grow">Overmorgen</span></button>
-          <button className="menu-item" onClick={run(() => act.postpone(live, nextSat))}><Icon name="calendar" size={20} /><span className="grow">Het weekend</span></button>
-          <button className="menu-item" onClick={run(() => act.postpone(live, 7))}><Icon name="calendar" size={20} /><span className="grow">Volgende week</span></button>
-          {p && !live.swap_to && <>
-            <p className="label">Samen</p>
-            <button className="menu-item" onClick={run(() => act.askSwap(live, title))}>
-              <Icon name="swap" size={20} /><span className="grow">Vraag {p.name} om het over te nemen</span>
-            </button>
-          </>}
-        </div>
-      ))}
-    </Sheet>
+    <div className="row">
+      <Avatar m={m} size={30} />
+      <span className="row-main"><span className="row-title">{m.name}</span><span className="row-sub">{status}</span></span>
+      {items.length > 0 && <Ring value={done / items.length} size={30} stroke={4} />}
+    </div>
   )
 }
 
-function PartnerStatus({ m, items }: { m: Member; items: PlanItem[] }) {
-  if (m.timer_ends_at && Date.parse(m.timer_ends_at) > Date.now()) return <>⏱️ Is nu bezig</>
-  if (m.snooze_reason) return <>😴 Later: {m.snooze_reason}</>
-  if (!items.length) return <>Niks op de planning vandaag</>
-  const done = items.filter((i) => i.status === 'done').length
-  return <>{done === items.length ? '✅ Klaar voor vandaag' : `${done} van ${items.length} gedaan`}</>
-}
-
-const Empty = ({ icon, title, text }: { icon: string; title: string; text: string }) => (
-  <div className="empty"><span className="empty-icon">{icon}</span><h2>{title}</h2><p className="muted">{text}</p></div>
-)
-
-/** Speelse ondertitel die bij het moment past (wisselt per dag). */
-function pickLine(x: { rest: boolean; allDone: boolean; running: boolean; snoozed: boolean; n: number; min: number; streak: number; partner?: string }) {
-  const day = new Date().getDate()
-  const pick = (l: string[]) => l[day % l.length]
-  if (x.rest) return pick(['Rustdag. Voeten omhoog 🌿', 'Vandaag hoeft er niks. Geniet ervan ☕'])
-  if (x.running) return pick(['Go go go! Je kunt het 💨', 'Muziekje aan en gaan 🎶', 'Elke minuut telt ⏱️'])
-  if (x.allDone) return pick(['Je huis is je dankbaar 🏡', 'Klaar! De rest van de avond is van jou 🛋️', 'Opgeruimd staat netjes ✨'])
-  if (x.snoozed) return 'Even pauze, ik herinner je straks 😴'
-  if (!x.n) return pick(['Alles bij. Lekker bezig 🙌', 'Niks te doen. Wat een luxe ✨'])
-  if (x.streak >= 3) return `${x.streak} dagen op rij, hou vol! 🔥`
-  return pick([
-    `${x.n} ${x.n === 1 ? 'taakje' : 'taakjes'}, ±${x.min} min, en je huis glimt weer ✨`,
-    `Een kwartiertje en je bent klaar 💪`,
-    x.partner ? `Samen met ${x.partner} houd je het bij 👫` : 'Kleine stapjes, opgeruimd huis 🧹',
-  ])
+/** Opties per taak: verplaatsen, laten overnemen, samen gedaan, ongedaan maken. */
+function ItemMenu({ item, onClose }: { item: PlanItem | null; onClose: () => void }) {
+  const { d, act } = useApp()
+  const live = item && d.items.find((i) => i.id === item.id)
+  const name = live ? d.tasks.find((x) => x.id === live.task_id)?.title ?? '' : ''
+  const run = (fn: () => unknown) => async () => { onClose(); await fn() }
+  const nextSat = ((5 - weekday(localDate()) + 7) % 7) || 7
+  const days = list('days.long')
+  const at = (n: number) => days[weekday(addDays(localDate(), n))]
+  return (
+    <Sheet open={!!item} onClose={onClose} title={name}>
+      {live && live.status === 'done' && (
+        <>
+          <div className="list"><button className="row" onClick={run(() => act.toggle(live))}>
+            <Ic name="back" tone="gray" /><span className="row-main"><span className="row-title">{t('menu.undo')}</span><span className="row-sub">{t('menu.undoSub')}</span></span>
+          </button></div>
+          {d.others.length > 0 && (
+            <div className="group"><span className="label">{t('menu.together')}</span>
+              <div className="list">{d.others.map((o) => (
+                <button key={o.user_id} className="row" onClick={run(() => act.together(live, live.helper === o.user_id ? null : o.user_id))}>
+                  <Avatar m={o} size={30} /><span className="row-main"><span className="row-title">{o.name}</span><span className="row-sub">{t('menu.togetherSub')}</span></span>
+                  {live.helper === o.user_id && <Icon name="check" size={18} />}
+                </button>
+              ))}</div></div>
+          )}
+        </>
+      )}
+      {live && live.status !== 'done' && (
+        <>
+          <div className="group"><span className="label">{t('menu.moveTo')}</span>
+            <div className="list">
+              {([[1, 'menu.tomorrow'], [2, 'menu.dayAfter'], [nextSat, 'menu.weekend'], [7, 'menu.nextWeek']] as const).map(([n, k]) => (
+                <button key={k} className="row" onClick={run(() => act.postpone(live, n))}>
+                  <Ic name="calendar" /><span className="row-main"><span className="row-title">{t(k)}</span></span><span className="row-val" style={{ textTransform: 'capitalize' }}>{at(n)}</span>
+                </button>
+              ))}
+            </div></div>
+          {d.others.length > 0 && !live.swap_to && (
+            <div className="group"><span className="label">{t('menu.ask')}</span>
+              <div className="list">{d.others.map((o) => (
+                <button key={o.user_id} className="row" onClick={run(() => act.askSwap(live, name, o.user_id))}>
+                  <Avatar m={o} size={30} /><span className="row-main"><span className="row-title">{o.name}</span><span className="row-sub">{t('menu.askSub')}</span></span>
+                  <Icon name="swap" size={18} />
+                </button>
+              ))}</div></div>
+          )}
+        </>
+      )}
+    </Sheet>
+  )
 }

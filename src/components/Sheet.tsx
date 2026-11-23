@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { Icon } from './Icon'
+import { t } from '../lib/i18n'
 
 /** iOS-achtige bottom sheet: veert open, en je kunt hem naar beneden vegen om te sluiten. */
 export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
@@ -58,7 +60,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
           <div className="grabber" />
           <div className="sheet-head">
             <h2>{title}</h2>
-            <button className="icon-btn" onPointerDown={(e) => e.stopPropagation()} onClick={onClose} aria-label="Sluiten">✕</button>
+            <button className="icon-btn" onPointerDown={(e) => e.stopPropagation()} onClick={onClose} aria-label={t('common.close')}><Icon name="x" size={18} /></button>
           </div>
         </div>
         <div className="sheet-body">{children}</div>
