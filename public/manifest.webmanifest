@@ -1,7 +1,7 @@
 {
   "name": "Opgeruimd",
   "short_name": "Opgeruimd",
-  "description": "Samen 15 minuten per dag, en het huis blijft op orde.",
+  "description": "Maak van opruimen een spel. Bas zet je klusjes klaar voor een dagelijkse ronde van 15 minuten.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
